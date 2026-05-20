@@ -1,0 +1,189 @@
+<?xml version="1.0"?>
+<!--
+  drone_world.sdf — Gazebo world for the pathfinder showcase.
+
+  Obstacle layout mirrors src/pathfinder_core/tools/generate_demo_map.cpp
+  so that the planning octomap and the simulated geometry agree:
+
+    Posts (0.5 x 0.5 x 5 m, on the floor, matches generate_demo_map.cpp exactly):
+      (x=2, y=2), (x=5, y=7), (x=8, y=3)
+
+    Overhangs (2 x 2 x 0.5 m slabs centered at z=2.25, spanning z in [2.0, 2.5]):
+      center (4, 5),   matches octomap fill (3,4)-(5,6)
+      center (7.5, 2), matches octomap fill (6.5,1)-(8.5,3)
+
+    Low ceiling (2 x 2 x 0.2 m slab centered at z=1.1, ceiling at z=1.0):
+      center (1.5, 1.5), matches octomap fill (0.5,0.5)-(2.5,2.5) at z=1.0-1.2
+
+  Ground plane is 10 x 10 m, dark green, matching the octomap's filled floor.
+
+  If you edit these positions, also update generate_demo_map.cpp (and vice versa).
+-->
+<sdf version="1.9">
+  <world name="pathfinder_drone_world">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>1 1 1 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+    </scene>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <pose>5 5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>10 10 0.1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>10 10 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.3 0.1 1</ambient>
+            <diffuse>0.1 0.4 0.1 1</diffuse>
+            <specular>0.1 0.2 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="post_a">
+      <static>true</static>
+      <pose>2 2 2.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
+          <material>
+            <ambient>0.5 0.3 0.2 1</ambient>
+            <diffuse>0.6 0.4 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="post_b">
+      <static>true</static>
+      <pose>5 7 2.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
+          <material>
+            <ambient>0.5 0.3 0.2 1</ambient>
+            <diffuse>0.6 0.4 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="post_c">
+      <static>true</static>
+      <pose>8 3 2.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
+          <material>
+            <ambient>0.5 0.3 0.2 1</ambient>
+            <diffuse>0.6 0.4 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="overhang_a">
+      <static>true</static>
+      <pose>4 5 2.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2 2 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2 2 0.5</size></box></geometry>
+          <material>
+            <ambient>0.3 0.3 0.5 1</ambient>
+            <diffuse>0.4 0.4 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="overhang_b">
+      <static>true</static>
+      <pose>7.5 2 2.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2 2 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2 2 0.5</size></box></geometry>
+          <material>
+            <ambient>0.3 0.3 0.5 1</ambient>
+            <diffuse>0.4 0.4 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="low_ceiling">
+      <static>true</static>
+      <pose>1.5 1.5 1.1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2 2 0.2</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2 2 0.2</size></box></geometry>
+          <material>
+            <ambient>0.4 0.2 0.2 1</ambient>
+            <diffuse>0.5 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

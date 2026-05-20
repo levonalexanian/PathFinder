@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!-- ROS-side URDF for the pathfinder cheater drone.
+     This drives robot_state_publisher / TF only. The Gazebo simulation
+     uses gazebo/drone.sdf (which carries the VelocityControl plugin). -->
+<robot name="pathfinder_drone" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="base_size_x" value="0.30"/>
+  <xacro:property name="base_size_y" value="0.30"/>
+  <xacro:property name="base_size_z" value="0.10"/>
+  <xacro:property name="base_mass"   value="1.5"/>
+
+  <xacro:property name="rotor_radius" value="0.06"/>
+  <xacro:property name="rotor_height" value="0.02"/>
+  <xacro:property name="rotor_mass"   value="0.05"/>
+  <xacro:property name="arm"          value="0.13"/>
+
+  <material name="drone_dark_gray">
+    <color rgba="0.2 0.2 0.2 1.0"/>
+  </material>
+  <material name="rotor_light_gray">
+    <color rgba="0.7 0.7 0.7 1.0"/>
+  </material>
+
+  <xacro:macro name="rotor" params="suffix x y">
+    <link name="rotor_${suffix}">
+      <visual>
+        <geometry>
+          <cylinder radius="${rotor_radius}" length="${rotor_height}"/>
+        </geometry>
+        <material name="rotor_light_gray"/>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="${rotor_radius}" length="${rotor_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${rotor_mass}"/>
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="2e-5"/>
+      </inertial>
+    </link>
+    <joint name="base_to_rotor_${suffix}" type="fixed">
+      <parent link="base_link"/>
+      <child link="rotor_${suffix}"/>
+      <origin xyz="${x} ${y} ${base_size_z/2 + rotor_height/2}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${base_size_x} ${base_size_y} ${base_size_z}"/>
+      </geometry>
+      <material name="drone_dark_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${base_size_x} ${base_size_y} ${base_size_z}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${base_mass}"/>
+      <inertia
+        ixx="${base_mass * (base_size_y*base_size_y + base_size_z*base_size_z) / 12.0}"
+        iyy="${base_mass * (base_size_x*base_size_x + base_size_z*base_size_z) / 12.0}"
+        izz="${base_mass * (base_size_x*base_size_x + base_size_y*base_size_y) / 12.0}"
+        ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <xacro:rotor suffix="fl" x="${arm}"  y="${arm}"/>
+  <xacro:rotor suffix="fr" x="${arm}"  y="-${arm}"/>
+  <xacro:rotor suffix="rl" x="-${arm}" y="${arm}"/>
+  <xacro:rotor suffix="rr" x="-${arm}" y="-${arm}"/>
+
+</robot>
