@@ -104,11 +104,12 @@
         ixy="0" ixz="0" iyz="0"/>
     </inertial>
   </link>
-  <!-- Free-swivel passive caster at the front; floor of base sits at -base_size_z/2 -->
+  <!-- Free-swivel passive caster at the front. Caster bottom is aligned with wheel
+       bottom (base z = -0.095) so the caster doesn't drag into the ground. -->
   <joint name="caster_joint" type="fixed">
     <parent link="base_link"/>
     <child link="caster_link"/>
-    <origin xyz="${caster_x} 0 ${-base_size_z/2 - caster_radius + 0.005}" rpy="0 0 0"/>
+    <origin xyz="${caster_x} 0 -0.07" rpy="0 0 0"/>
   </joint>
 
 </robot>
