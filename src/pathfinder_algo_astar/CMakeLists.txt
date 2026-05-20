@@ -22,6 +22,19 @@ find_package(std_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OCTOMAP REQUIRED octomap)
 
+add_library(astar_core src/astar_core.cpp)
+target_include_directories(astar_core PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  ${OCTOMAP_INCLUDE_DIRS}
+)
+ament_target_dependencies(astar_core
+  rclcpp
+  pathfinder_core
+)
+target_link_libraries(astar_core ${OCTOMAP_LIBRARIES})
+target_link_directories(astar_core PUBLIC ${OCTOMAP_LIBRARY_DIRS})
+
 add_executable(astar_node src/astar_node.cpp)
 target_include_directories(astar_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -38,12 +51,20 @@ ament_target_dependencies(astar_node
   visualization_msgs
   std_msgs
 )
-target_link_libraries(astar_node ${OCTOMAP_LIBRARIES})
+target_link_libraries(astar_node astar_core ${OCTOMAP_LIBRARIES})
 target_link_directories(astar_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
 
 install(
   TARGETS astar_node
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  TARGETS astar_core
+  EXPORT export_astar_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 install(
