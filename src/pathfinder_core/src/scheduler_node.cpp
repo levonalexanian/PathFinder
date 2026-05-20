@@ -10,6 +10,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <octomap_msgs/msg/octomap.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -26,6 +27,7 @@ constexpr char kPlannedPathTopic[] = "/planned_path";
 constexpr char kAlgorithmSelectionTopic[] = "/algorithm_selection";
 constexpr char kGoalPoseTopic[] = "/goal_pose";
 constexpr char kVoxelMapTopic[] = "/voxel_map";
+constexpr char kSearchVisualizationTopic[] = "/search_visualization";
 }  // namespace
 
 class SchedulerNode : public rclcpp::Node
@@ -48,6 +50,8 @@ public:
       kPlannerStatusTopic, rclcpp::QoS(10));
     path_pub_ = create_publisher<nav_msgs::msg::Path>(
       kPlannedPathTopic, rclcpp::QoS(10));
+    marker_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
+      kSearchVisualizationTopic, rclcpp::QoS(10).transient_local());
 
     algorithm_sub_ = create_subscription<pathfinder_msgs::msg::AlgorithmSelection>(
       kAlgorithmSelectionTopic, rclcpp::QoS(10),
@@ -166,6 +170,7 @@ private:
           get_logger(),
           "planner feedback: explored=%d best_cost=%.3f",
           feedback->nodes_explored, feedback->best_cost_so_far);
+        marker_pub_->publish(feedback->search_state);
       };
     opts.result_callback =
       [this](const GoalHandle::WrappedResult & wrapped) {
@@ -215,6 +220,7 @@ private:
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr map_sub_;
   rclcpp::Publisher<pathfinder_msgs::msg::PlannerStatus>::SharedPtr status_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp_action::Client<RequestPath>::SharedPtr action_client_;
   rclcpp::TimerBase::SharedPtr status_timer_;
 };

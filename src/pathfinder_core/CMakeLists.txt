@@ -46,6 +46,7 @@ ament_target_dependencies(scheduler_node
   octomap_msgs
   nav_msgs
   geometry_msgs
+  visualization_msgs
   tf2
   tf2_ros
 )
