@@ -12,7 +12,12 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <octomap/octomap.h>
+#include <octomap/OcTree.h>
+#include <octomap_msgs/conversions.h>
+
 #include <pathfinder_core/planner_action_server_base.hpp>
+#include <pathfinder_core/voxel_grid.hpp>
 #include "pathfinder_astar/astar_grid.hpp"
 
 namespace pathfinder_astar
@@ -22,9 +27,11 @@ namespace
 {
 
 constexpr char kActionName[] = "/astar/request_path";
-constexpr char kNodeName[] = "astar_planner";
 constexpr char kMapFrame[] = "map";
 constexpr std::size_t kMaxMarkerVoxels = 500;
+
+using pathfinder_core::InflatedVoxelGrid;
+using pathfinder_core::VoxelIndex;
 
 void fill_marker_header(
   visualization_msgs::msg::Marker & m,
@@ -40,11 +47,14 @@ void fill_marker_header(
   m.pose.orientation.w = 1.0;
 }
 
-geometry_msgs::msg::Point voxel_point(const VoxelGrid & grid, std::size_t flat)
+geometry_msgs::msg::Point voxel_point(const InflatedVoxelGrid & grid, std::size_t flat)
 {
-  const auto v = unflatten(flat, grid.dims);
+  const auto v = grid.from_linear_index(flat);
+  const auto w = grid.voxel_to_world(v);
   geometry_msgs::msg::Point p;
-  grid.voxel_to_world(v.x, v.y, v.z, p.x, p.y, p.z);
+  p.x = w[0];
+  p.y = w[1];
+  p.z = w[2];
   return p;
 }
 
@@ -86,6 +96,28 @@ visualization_msgs::msg::Marker make_line_marker(
   return m;
 }
 
+double voxel_distance(const VoxelIndex & a, const VoxelIndex & b, double resolution)
+{
+  const double dx = static_cast<double>(a.x - b.x);
+  const double dy = static_cast<double>(a.y - b.y);
+  const double dz = static_cast<double>(a.z - b.z);
+  return std::sqrt(dx * dx + dy * dy + dz * dz) * resolution;
+}
+
+std::unique_ptr<octomap::OcTree> octree_from_msg(const octomap_msgs::msg::Octomap & msg)
+{
+  std::unique_ptr<octomap::AbstractOcTree> abstract_tree{octomap_msgs::msgToMap(msg)};
+  if (!abstract_tree) {
+    return nullptr;
+  }
+  auto * raw = dynamic_cast<octomap::OcTree *>(abstract_tree.get());
+  if (raw == nullptr) {
+    return nullptr;
+  }
+  abstract_tree.release();
+  return std::unique_ptr<octomap::OcTree>(raw);
+}
+
 }  // namespace
 
 class AstarServer : public pathfinder_core::PlannerActionServerBase
@@ -124,59 +156,54 @@ protected:
       return;
     }
 
-    auto grid = build_inflated_grid(*tree, robot_radius);
-    if (grid.dims.size() == 0) {
+    InflatedVoxelGrid grid(*tree, robot_radius);
+    if (grid.cell_count() == 0) {
       result.success = false;
       result.message = "voxel grid is empty";
       return;
     }
 
-    const double res = grid.resolution;
+    const double res = grid.resolution();
+    const auto dims = grid.dims();
     RCLCPP_INFO(
       node()->get_logger(),
       "A* search on %dx%dx%d grid (res=%.3f m, radius=%.2f m)",
-      grid.dims.nx, grid.dims.ny, grid.dims.nz, res, robot_radius);
+      dims[0], dims[1], dims[2], res, robot_radius);
 
-    const auto start_v = grid.world_to_voxel(
+    const VoxelIndex start_v = grid.world_to_voxel(
       goal.start.pose.position.x,
       goal.start.pose.position.y,
       goal.start.pose.position.z);
-    const auto goal_v = grid.world_to_voxel(
+    const VoxelIndex goal_v = grid.world_to_voxel(
       goal.goal.pose.position.x,
       goal.goal.pose.position.y,
       goal.goal.pose.position.z);
 
     const int nudge_radius = std::max(
       4, static_cast<int>(std::ceil(0.5 / std::max(res, 1e-3))));
-    const auto start_candidates =
-      nudge_to_free(grid, start_v.x, start_v.y, start_v.z, nudge_radius);
-    const auto goal_candidates =
-      nudge_to_free(grid, goal_v.x, goal_v.y, goal_v.z, nudge_radius);
-    if (start_candidates.empty()) {
+    const auto start_opt = grid.nudge_to_free(start_v, nudge_radius);
+    const auto goal_opt = grid.nudge_to_free(goal_v, nudge_radius);
+    if (!start_opt) {
       result.success = false;
       result.message = "start voxel is occupied and no nearby free voxel found";
       return;
     }
-    if (goal_candidates.empty()) {
+    if (!goal_opt) {
       result.success = false;
       result.message = "goal voxel is occupied and no nearby free voxel found";
       return;
     }
-    const VoxelIndex start_idx = start_candidates.front();
-    const VoxelIndex goal_idx = goal_candidates.front();
-    const std::size_t start_flat = grid.dims.flat(start_idx.x, start_idx.y, start_idx.z);
-    const std::size_t goal_flat = grid.dims.flat(goal_idx.x, goal_idx.y, goal_idx.z);
+    const VoxelIndex start_idx = *start_opt;
+    const VoxelIndex goal_idx = *goal_opt;
+    const std::size_t start_flat = grid.linear_index(start_idx);
+    const std::size_t goal_flat = grid.linear_index(goal_idx);
 
     SearchBuffers buf;
-    buf.reset(grid.dims.size());
+    buf.reset(grid.cell_count());
     buf.g_score[start_flat] = 0.0;
 
-    const auto neighbors = neighbor_offsets_26();
-
     OpenQueue open;
-    const double h_start = euclidean_voxel_distance(
-      start_idx.x, start_idx.y, start_idx.z,
-      goal_idx.x, goal_idx.y, goal_idx.z, res);
+    const double h_start = voxel_distance(start_idx, goal_idx, res);
     open.push({h_start, h_start, start_flat});
     buf.in_open[start_flat] = 1;
 
@@ -193,7 +220,6 @@ protected:
         Feedback fb;
         fb.nodes_explored = nodes_expanded;
 
-        // gather open-set voxel flats — copy queue (cheap pointer-wise)
         std::vector<std::size_t> open_flats;
         {
           OpenQueue copy = open;
@@ -203,7 +229,6 @@ protected:
           }
         }
 
-        // gather closed-set voxel flats with stride decimation
         std::vector<std::size_t> closed_flats;
         const std::size_t closed_total = buf.closed.size();
         std::size_t closed_count = 0;
@@ -244,14 +269,16 @@ protected:
         auto path_marker = make_line_marker(
           stamp, "CURRENT_BEST_PATH", 2, res * 0.3, 0.0f, 1.0f, 0.0f, 0.9f);
         if (include_best_path) {
-          const auto best_voxels = reconstruct_path(buf, grid.dims, best_open_flat);
+          const auto best_voxels = reconstruct_path(buf, grid, best_open_flat);
           path_marker.points.reserve(best_voxels.size());
           for (const auto & v : best_voxels) {
+            const auto w = grid.voxel_to_world(v);
             geometry_msgs::msg::Point p;
-            grid.voxel_to_world(v.x, v.y, v.z, p.x, p.y, p.z);
+            p.x = w[0];
+            p.y = w[1];
+            p.z = w[2];
             path_marker.points.push_back(p);
           }
-          // also drop a "current_best" Path for the scheduler
           nav_msgs::msg::Path cb;
           cb.header.frame_id = kMapFrame;
           cb.header.stamp = stamp;
@@ -259,18 +286,17 @@ protected:
           for (const auto & v : best_voxels) {
             geometry_msgs::msg::PoseStamped ps;
             ps.header = cb.header;
-            grid.voxel_to_world(v.x, v.y, v.z,
-              ps.pose.position.x, ps.pose.position.y, ps.pose.position.z);
+            const auto w = grid.voxel_to_world(v);
+            ps.pose.position.x = w[0];
+            ps.pose.position.y = w[1];
+            ps.pose.position.z = w[2];
             ps.pose.orientation.w = 1.0;
             cb.poses.push_back(ps);
           }
           fb.current_best = cb;
+          const auto best_v = grid.from_linear_index(best_open_flat);
           fb.best_cost_so_far = buf.g_score[best_open_flat] +
-            euclidean_voxel_distance(
-              unflatten(best_open_flat, grid.dims).x,
-              unflatten(best_open_flat, grid.dims).y,
-              unflatten(best_open_flat, grid.dims).z,
-              goal_idx.x, goal_idx.y, goal_idx.z, res);
+            voxel_distance(best_v, goal_idx, res);
         }
 
         fb.search_state.markers.push_back(open_marker);
@@ -309,31 +335,23 @@ protected:
         best_open_flat = cur.flat;
       }
 
-      const VoxelIndex cv = unflatten(cur.flat, grid.dims);
-      for (const auto & off : neighbors) {
-        const int nx = cv.x + off.x;
-        const int ny = cv.y + off.y;
-        const int nz = cv.z + off.z;
-        if (!grid.dims.in_bounds(nx, ny, nz)) {
-          continue;
-        }
-        const std::size_t nflat = grid.dims.flat(nx, ny, nz);
+      const VoxelIndex cv = grid.from_linear_index(cur.flat);
+      for (const auto & nb : grid.neighbors_26(cv)) {
+        const std::size_t nflat = grid.linear_index(nb);
         if (buf.closed[nflat]) {
           continue;
         }
-        if (grid.occupied[nflat]) {
+        if (grid.is_occupied(nb)) {
           continue;
         }
-        const double step = euclidean_voxel_distance(
-          cv.x, cv.y, cv.z, nx, ny, nz, res);
+        const double step = voxel_distance(cv, nb, res);
         const double tentative_g = buf.g_score[cur.flat] + step;
         if (tentative_g >= buf.g_score[nflat]) {
           continue;
         }
         buf.g_score[nflat] = tentative_g;
         buf.came_from[nflat] = static_cast<int32_t>(cur.flat);
-        const double h = euclidean_voxel_distance(
-          nx, ny, nz, goal_idx.x, goal_idx.y, goal_idx.z, res);
+        const double h = voxel_distance(nb, goal_idx, res);
         open.push({tentative_g + h, h, nflat});
         buf.in_open[nflat] = 1;
       }
@@ -373,13 +391,12 @@ protected:
       return;
     }
 
-    const auto path_voxels = reconstruct_path(buf, grid.dims, goal_flat);
+    const auto path_voxels = reconstruct_path(buf, grid, goal_flat);
     nav_msgs::msg::Path path;
     path.header.frame_id = kMapFrame;
     path.header.stamp = node()->now();
-    path.poses.reserve(path_voxels.size() + 1);
+    path.poses.reserve(path_voxels.size() + 2);
 
-    // ensure path starts exactly at requested start position
     {
       geometry_msgs::msg::PoseStamped ps;
       ps.header = path.header;
@@ -389,12 +406,13 @@ protected:
     for (const auto & v : path_voxels) {
       geometry_msgs::msg::PoseStamped ps;
       ps.header = path.header;
-      grid.voxel_to_world(v.x, v.y, v.z,
-        ps.pose.position.x, ps.pose.position.y, ps.pose.position.z);
+      const auto w = grid.voxel_to_world(v);
+      ps.pose.position.x = w[0];
+      ps.pose.position.y = w[1];
+      ps.pose.position.z = w[2];
       ps.pose.orientation.w = 1.0;
       path.poses.push_back(ps);
     }
-    // ensure path ends exactly at requested goal position
     {
       geometry_msgs::msg::PoseStamped ps;
       ps.header = path.header;
