@@ -4,7 +4,7 @@ DEV_TTY := $(COMPOSE) run --rm --service-ports dev
 
 TOOLCHAIN := /workspace/build/conan_toolchain.cmake
 
-.PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base launch-astar launch-dijkstra launch-rrt launch-algos launch-demo-drone launch-demo-car generate-map regenerate-drone-description regenerate-car-description sh down clean
+.PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base launch-astar launch-dijkstra launch-rrt launch-algos launch-demo-drone launch-demo-car foxglove-up foxglove-down generate-map regenerate-drone-description regenerate-car-description sh down clean
 
 help:
 	@echo "PathFinder make targets:"
@@ -28,6 +28,8 @@ help:
 	@echo "  launch-algos                 Launch all three planner action servers together"
 	@echo "  launch-demo-drone            Drone bringup + all three planner servers"
 	@echo "  launch-demo-car              Car bringup + all three planner servers"
+	@echo "  foxglove-up                  Start the Foxglove Studio web container at http://localhost:8080"
+	@echo "  foxglove-down                Stop the Foxglove Studio web container"
 	@echo "  sh                           Open an interactive shell in the dev container"
 	@echo "  down                         Stop and remove containers"
 	@echo "  clean                        Stop containers and remove the local image"
@@ -46,18 +48,18 @@ test:
 
 launch: launch-drone
 
-launch-drone:
+launch-drone: foxglove-up
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_drone drone.launch.py'
 
-launch-drone-headless:
+launch-drone-headless: foxglove-up
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_drone drone.launch.py headless:=true'
 
 launch-headless: launch-drone-headless
 
-launch-car:
+launch-car: foxglove-up
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_car car.launch.py'
 
-launch-car-headless:
+launch-car-headless: foxglove-up
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_car car.launch.py headless:=true'
 
 launch-base:
@@ -75,11 +77,17 @@ launch-rrt:
 launch-algos:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup algos.launch.py'
 
-launch-demo-drone:
+launch-demo-drone: foxglove-up
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_drone.launch.py'
 
-launch-demo-car:
+launch-demo-car: foxglove-up
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_car.launch.py'
+
+foxglove-up:
+	$(COMPOSE) up -d foxglove
+
+foxglove-down:
+	$(COMPOSE) rm -sf foxglove
 
 generate-map:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && mkdir -p maps && ros2 run pathfinder_core generate_demo_map maps/demo_world.bt'
