@@ -22,9 +22,23 @@ find_package(std_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OCTOMAP REQUIRED octomap)
 
+add_library(dstar_lite_core
+  src/dstar_lite_core.cpp
+)
+target_include_directories(dstar_lite_core PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  ${OCTOMAP_INCLUDE_DIRS}
+)
+ament_target_dependencies(dstar_lite_core
+  rclcpp
+  pathfinder_core
+)
+target_link_libraries(dstar_lite_core ${OCTOMAP_LIBRARIES})
+target_link_directories(dstar_lite_core PUBLIC ${OCTOMAP_LIBRARY_DIRS})
+
 add_executable(dstar_lite_node
   src/dstar_lite_node.cpp
-  src/dstar_lite_grid.cpp
 )
 target_include_directories(dstar_lite_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -41,8 +55,19 @@ ament_target_dependencies(dstar_lite_node
   visualization_msgs
   std_msgs
 )
-target_link_libraries(dstar_lite_node ${OCTOMAP_LIBRARIES})
+target_link_libraries(dstar_lite_node
+  dstar_lite_core
+  ${OCTOMAP_LIBRARIES}
+)
 target_link_directories(dstar_lite_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
+install(
+  TARGETS dstar_lite_core
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
 install(
   TARGETS dstar_lite_node
