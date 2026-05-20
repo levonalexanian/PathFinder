@@ -1,0 +1,12 @@
+geometry_msgs/PoseStamped start
+geometry_msgs/PoseStamped goal
+---
+nav_msgs/Path path
+bool success
+string message
+float64 plan_duration_ms
+---
+int32 nodes_explored
+float64 best_cost_so_far
+nav_msgs/Path current_best
+visualization_msgs/MarkerArray search_state

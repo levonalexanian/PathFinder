@@ -1,0 +1,2 @@
+string algorithm_name
+string map_frame
