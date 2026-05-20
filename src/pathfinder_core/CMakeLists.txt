@@ -56,13 +56,18 @@ target_include_directories(map_publisher_node PRIVATE ${OCTOMAP_INCLUDE_DIRS})
 target_link_libraries(map_publisher_node ${OCTOMAP_LIBRARIES})
 target_link_directories(map_publisher_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
 
+add_executable(generate_demo_map tools/generate_demo_map.cpp)
+target_include_directories(generate_demo_map PRIVATE ${OCTOMAP_INCLUDE_DIRS})
+target_link_libraries(generate_demo_map ${OCTOMAP_LIBRARIES})
+target_link_directories(generate_demo_map PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
 install(
   DIRECTORY include/
   DESTINATION include
 )
 
 install(
-  TARGETS scheduler_node map_publisher_node
+  TARGETS scheduler_node map_publisher_node generate_demo_map
   DESTINATION lib/${PROJECT_NAME}
 )
 
