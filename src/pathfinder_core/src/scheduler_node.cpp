@@ -1,6 +1,6 @@
+#include <atomic>
 #include <chrono>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 
@@ -95,16 +95,20 @@ private:
     RCLCPP_INFO(
       get_logger(), "switching active algorithm: %s -> %s",
       active_algorithm_.c_str(), msg->algorithm_name.c_str());
+    if (planning_.load() && action_client_) {
+      // cancel prior plan before switching algorithms — avoid stale callbacks
+      action_client_->async_cancel_all_goals();
+    }
     active_algorithm_ = msg->algorithm_name;
     if (!msg->map_frame.empty()) {
       map_frame_ = msg->map_frame;
     }
+    planning_ = false;
     rebuild_action_client();
   }
 
   void on_map(const octomap_msgs::msg::Octomap::SharedPtr msg)
   {
-    std::lock_guard<std::mutex> lk(state_mutex_);
     have_map_ = true;
     if (!msg->header.frame_id.empty()) {
       map_frame_ = msg->header.frame_id;
@@ -113,13 +117,7 @@ private:
 
   void on_goal_pose(const geometry_msgs::msg::PoseStamped::SharedPtr goal_pose)
   {
-    bool have_map_local;
-    {
-      std::lock_guard<std::mutex> lk(state_mutex_);
-      have_map_local = have_map_;
-    }
-
-    if (!have_map_local) {
+    if (!have_map_.load()) {
       RCLCPP_WARN(get_logger(), "goal received but no octomap yet; ignoring");
       planning_ = false;
       return;
@@ -197,7 +195,7 @@ private:
   {
     pathfinder_msgs::msg::PlannerStatus status;
     status.active_algorithm = active_algorithm_;
-    status.planning = planning_;
+    status.planning = planning_.load();
     status.last_plan_duration_ms = last_plan_duration_ms_;
     status_pub_->publish(status);
   }
@@ -205,11 +203,9 @@ private:
   std::string active_algorithm_;
   std::string map_frame_ = "map";
   std::string base_frame_ = "base_link";
-  bool have_map_ = false;
-  bool planning_ = false;
+  std::atomic<bool> have_map_{false};
+  std::atomic<bool> planning_{false};
   double last_plan_duration_ms_ = 0.0;
-
-  std::mutex state_mutex_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
