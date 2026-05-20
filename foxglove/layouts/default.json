@@ -47,7 +47,13 @@
       "scene": {},
       "transforms": {},
       "topics": {
-        "/voxel_map": { "visible": true },
+        "/voxel_map_cloud": {
+          "visible": true,
+          "colorMode": "colormap",
+          "colorField": "z",
+          "colorMap": "turbo",
+          "pointSize": 6
+        },
         "/planned_path": { "visible": true },
         "/search_visualization": { "visible": true }
       },

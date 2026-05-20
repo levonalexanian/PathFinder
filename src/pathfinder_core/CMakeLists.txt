@@ -19,6 +19,7 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -73,6 +74,16 @@ target_include_directories(map_publisher_node PRIVATE ${OCTOMAP_INCLUDE_DIRS})
 target_link_libraries(map_publisher_node ${OCTOMAP_LIBRARIES})
 target_link_directories(map_publisher_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
 
+add_executable(voxel_map_visualizer_node src/voxel_map_visualizer_node.cpp)
+ament_target_dependencies(voxel_map_visualizer_node
+  rclcpp
+  octomap_msgs
+  sensor_msgs
+)
+target_include_directories(voxel_map_visualizer_node PRIVATE ${OCTOMAP_INCLUDE_DIRS})
+target_link_libraries(voxel_map_visualizer_node ${OCTOMAP_LIBRARIES})
+target_link_directories(voxel_map_visualizer_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
 add_executable(generate_demo_map tools/generate_demo_map.cpp)
 target_include_directories(generate_demo_map PRIVATE ${OCTOMAP_INCLUDE_DIRS})
 target_link_libraries(generate_demo_map ${OCTOMAP_LIBRARIES})
@@ -84,7 +95,7 @@ install(
 )
 
 install(
-  TARGETS scheduler_node gz_pose_relay_node map_publisher_node generate_demo_map
+  TARGETS scheduler_node gz_pose_relay_node map_publisher_node voxel_map_visualizer_node generate_demo_map
   DESTINATION lib/${PROJECT_NAME}
 )
 

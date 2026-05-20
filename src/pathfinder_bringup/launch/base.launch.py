@@ -44,6 +44,14 @@ def generate_launch_description():
         }],
     )
 
+    voxel_map_visualizer = Node(
+        package="pathfinder_core",
+        executable="voxel_map_visualizer_node",
+        name="voxel_map_visualizer",
+        output="screen",
+        parameters=[{"use_sim_time": use_sim_time}],
+    )
+
     scheduler = Node(
         package="pathfinder_core",
         executable="scheduler_node",
@@ -73,6 +81,7 @@ def generate_launch_description():
         declare_default_algorithm,
         declare_launch_foxglove,
         map_publisher,
+        voxel_map_visualizer,
         scheduler,
         foxglove,
     ])
