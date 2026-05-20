@@ -25,16 +25,8 @@ ament_target_dependencies(path_follower_node
   tf2_ros
 )
 
-add_executable(gz_pose_relay_node src/gz_pose_relay_node.cpp)
-ament_target_dependencies(gz_pose_relay_node
-  rclcpp
-  geometry_msgs
-  tf2
-  tf2_ros
-)
-
 install(
-  TARGETS path_follower_node gz_pose_relay_node
+  TARGETS path_follower_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
