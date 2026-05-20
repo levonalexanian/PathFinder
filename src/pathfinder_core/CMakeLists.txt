@@ -46,13 +46,23 @@ ament_target_dependencies(scheduler_node
   geometry_msgs
 )
 
+add_executable(map_publisher_node src/map_publisher_node.cpp)
+ament_target_dependencies(map_publisher_node
+  rclcpp
+  octomap_msgs
+  octomap_ros
+)
+target_include_directories(map_publisher_node PRIVATE ${OCTOMAP_INCLUDE_DIRS})
+target_link_libraries(map_publisher_node ${OCTOMAP_LIBRARIES})
+target_link_directories(map_publisher_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
 install(
   DIRECTORY include/
   DESTINATION include
 )
 
 install(
-  TARGETS scheduler_node
+  TARGETS scheduler_node map_publisher_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
