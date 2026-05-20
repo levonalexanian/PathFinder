@@ -1,6 +1,8 @@
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -14,14 +16,30 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <pathfinder_core/planner_action_server_base.hpp>
+#include <pathfinder_core/voxel_grid.hpp>
 
-#include "pathfinder_algo_dijkstra/dijkstra_grid.hpp"
+#include "pathfinder_algo_dijkstra/dijkstra_core.hpp"
 
 namespace pathfinder_algo_dijkstra
 {
 
 namespace
 {
+
+struct WorldPoint
+{
+  double x;
+  double y;
+  double z;
+};
+
+WorldPoint voxel_to_world_point(
+  const pathfinder_core::InflatedVoxelGrid & grid,
+  const pathfinder_core::VoxelIndex & v)
+{
+  const auto a = grid.voxel_to_world(v);
+  return {a[0], a[1], a[2]};
+}
 
 geometry_msgs::msg::PoseStamped make_pose(
   const WorldPoint & p,
@@ -51,6 +69,30 @@ nav_msgs::msg::Path make_path(
     path.poses.push_back(make_pose(p, frame_id, stamp));
   }
   return path;
+}
+
+std::vector<WorldPoint> voxels_to_world(
+  const pathfinder_core::InflatedVoxelGrid & grid,
+  const std::vector<pathfinder_core::VoxelIndex> & voxels)
+{
+  std::vector<WorldPoint> out;
+  out.reserve(voxels.size());
+  for (const auto & v : voxels) {
+    out.push_back(voxel_to_world_point(grid, v));
+  }
+  return out;
+}
+
+std::vector<WorldPoint> flat_indices_to_world(
+  const pathfinder_core::InflatedVoxelGrid & grid,
+  const std::vector<std::size_t> & flat)
+{
+  std::vector<WorldPoint> out;
+  out.reserve(flat.size());
+  for (auto lin : flat) {
+    out.push_back(voxel_to_world_point(grid, grid.from_linear_index(lin)));
+  }
+  return out;
 }
 
 visualization_msgs::msg::Marker make_cube_marker(
@@ -157,7 +199,8 @@ class DijkstraServer : public pathfinder_core::PlannerActionServerBase
 {
 public:
   DijkstraServer(rclcpp::Node * node, const std::string & action_name)
-  : pathfinder_core::PlannerActionServerBase(node, action_name)
+  : pathfinder_core::PlannerActionServerBase(node, action_name),
+    core_(node->get_logger())
   {
   }
 
@@ -168,19 +211,19 @@ protected:
     std::function<void(const Feedback &)> publish_feedback,
     Result & result) override
   {
-    const auto clock_start = std::chrono::steady_clock::now();
     auto * logger_node = node();
     const std::string output_frame = "map";
 
-    const double robot_radius =
+    DijkstraParams params;
+    params.robot_radius =
       logger_node->get_parameter("robot_radius").as_double();
-    const double max_plan_time_sec =
+    params.max_plan_time_sec =
       logger_node->get_parameter("max_plan_time_sec").as_double();
-    const int feedback_node_stride =
+    params.feedback_node_stride =
       static_cast<int>(logger_node->get_parameter("feedback_node_stride").as_int());
-    const double feedback_time_stride_sec =
+    params.feedback_time_stride_sec =
       logger_node->get_parameter("feedback_time_stride_sec").as_double();
-    const bool publish_current_best =
+    params.publish_current_best =
       logger_node->get_parameter("publish_current_best").as_bool();
 
     octomap::AbstractOcTree * abstract = octomap_msgs::msgToMap(latest_map);
@@ -197,69 +240,74 @@ protected:
       return;
     }
 
-    DijkstraGrid grid(*tree, robot_radius);
+    pathfinder_core::InflatedVoxelGrid grid(*tree, params.robot_radius);
     delete tree;
 
-    PlanRequest req{};
-    req.start = {
+    const auto start_v = grid.world_to_voxel(
+      goal.start.pose.position.x,
+      goal.start.pose.position.y,
+      goal.start.pose.position.z);
+    const auto goal_v = grid.world_to_voxel(
+      goal.goal.pose.position.x,
+      goal.goal.pose.position.y,
+      goal.goal.pose.position.z);
+
+    const WorldPoint start_world{
       goal.start.pose.position.x,
       goal.start.pose.position.y,
       goal.start.pose.position.z};
-    req.goal = {
-      goal.goal.pose.position.x,
-      goal.goal.pose.position.y,
-      goal.goal.pose.position.z};
-    req.robot_radius = robot_radius;
-    req.max_plan_time_sec = max_plan_time_sec;
 
-    auto on_progress = [&](const PlanProgress & prog) {
+    auto on_feedback = [&](const DijkstraFeedback & cb) {
       Feedback fb;
-      fb.nodes_explored = prog.nodes_explored;
-      fb.best_cost_so_far = prog.best_cost_so_far;
+      fb.nodes_explored = cb.nodes_explored;
+      fb.best_cost_so_far = cb.best_cost_so_far;
       const auto stamp = logger_node->now();
-      if (publish_current_best) {
-        fb.current_best = make_path(prog.current_best, output_frame, stamp);
+      const auto best_world = voxels_to_world(grid, cb.best_partial_path);
+      if (params.publish_current_best) {
+        fb.current_best = make_path(best_world, output_frame, stamp);
       } else {
         fb.current_best.header.frame_id = output_frame;
         fb.current_best.header.stamp = stamp;
       }
+      const auto explored_world = flat_indices_to_world(grid, cb.sampled_closed_flat);
+      const auto frontier_world = flat_indices_to_world(grid, cb.sampled_open_flat);
       visualization_msgs::msg::MarkerArray markers;
-      const double cube_scale = prog.resolution * 0.9;
+      const double cube_scale = grid.resolution() * 0.9;
       markers.markers.push_back(make_cube_marker(
-        prog.explored_set, output_frame, stamp, "EXPLORED_SET", 0,
-        cube_scale, 0.5f, 0.5f, 0.5f, 0.4f, &prog.start));
+        explored_world, output_frame, stamp, "EXPLORED_SET", 0,
+        cube_scale, 0.5f, 0.5f, 0.5f, 0.4f, &start_world));
       markers.markers.push_back(make_cube_marker(
-        prog.frontier_set, output_frame, stamp, "CURRENT_FRONTIER", 1,
+        frontier_world, output_frame, stamp, "CURRENT_FRONTIER", 1,
         cube_scale, 1.0f, 1.0f, 0.0f, 0.7f, nullptr));
-      if (publish_current_best && prog.current_best.size() >= 2) {
+      if (params.publish_current_best && best_world.size() >= 2) {
         markers.markers.push_back(make_line_marker(
-          prog.current_best, output_frame, stamp, "CURRENT_BEST_PATH", 2,
+          best_world, output_frame, stamp, "CURRENT_BEST_PATH", 2,
           0.05, 0.0f, 1.0f, 0.0f, 0.9f));
       }
       fb.search_state = markers;
       publish_feedback(fb);
     };
 
-    const auto outcome = grid.plan(
-      req, on_progress, feedback_node_stride, feedback_time_stride_sec);
+    const auto outcome = core_.plan(grid, start_v, goal_v, params, on_feedback);
 
     const auto stamp = logger_node->now();
-    result.path = make_path(outcome.path, output_frame, stamp);
+    const auto path_world = voxels_to_world(grid, outcome.path);
+    result.path = make_path(path_world, output_frame, stamp);
     result.success = outcome.success;
     result.message = outcome.message;
-    const auto clock_end = std::chrono::steady_clock::now();
-    result.plan_duration_ms = std::chrono::duration<double, std::milli>(
-      clock_end - clock_start).count();
+    result.plan_duration_ms = outcome.plan_duration_ms;
 
     RCLCPP_INFO(
       logger_node->get_logger(),
-      "dijkstra plan: success=%d nodes=%d cost=%.3f duration_ms=%.2f msg=%s",
+      "dijkstra plan: success=%d nodes=%d duration_ms=%.2f msg=%s",
       static_cast<int>(outcome.success),
-      outcome.nodes_explored,
-      outcome.best_cost,
-      result.plan_duration_ms,
+      outcome.nodes_expanded,
+      outcome.plan_duration_ms,
       outcome.message.c_str());
   }
+
+private:
+  DijkstraCore core_;
 };
 
 class DijkstraPlannerNode : public rclcpp::Node

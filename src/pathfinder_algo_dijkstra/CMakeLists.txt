@@ -22,9 +22,23 @@ find_package(std_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OCTOMAP REQUIRED octomap)
 
+add_library(dijkstra_core
+  src/dijkstra_core.cpp
+)
+target_include_directories(dijkstra_core PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  ${OCTOMAP_INCLUDE_DIRS}
+)
+ament_target_dependencies(dijkstra_core
+  rclcpp
+  pathfinder_core
+)
+target_link_libraries(dijkstra_core ${OCTOMAP_LIBRARIES})
+target_link_directories(dijkstra_core PUBLIC ${OCTOMAP_LIBRARY_DIRS})
+
 add_executable(dijkstra_node
   src/dijkstra_node.cpp
-  src/dijkstra_grid.cpp
 )
 target_include_directories(dijkstra_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -41,8 +55,18 @@ ament_target_dependencies(dijkstra_node
   visualization_msgs
   std_msgs
 )
-target_link_libraries(dijkstra_node ${OCTOMAP_LIBRARIES})
+target_link_libraries(dijkstra_node
+  dijkstra_core
+  ${OCTOMAP_LIBRARIES}
+)
 target_link_directories(dijkstra_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
+install(
+  TARGETS dijkstra_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
 install(
   TARGETS dijkstra_node
