@@ -190,9 +190,14 @@ private:
     const double yaw_err = wrap_to_pi(desired_yaw - current_yaw);
     const double wz = clip(k_yaw_ * yaw_err, -max_angular_, max_angular_);
 
+    const double cos_yaw = std::cos(current_yaw);
+    const double sin_yaw = std::sin(current_yaw);
+    const double body_vx = cos_yaw * vx + sin_yaw * vy;
+    const double body_vy = -sin_yaw * vx + cos_yaw * vy;
+
     geometry_msgs::msg::Twist desired;
-    desired.linear.x = vx;
-    desired.linear.y = vy;
+    desired.linear.x = body_vx;
+    desired.linear.y = body_vy;
     desired.linear.z = vz;
     desired.angular.z = wz;
 
