@@ -16,6 +16,18 @@
           "rotation": [0, 0, 0],
           "order": 1,
           "drawBehind": false
+        },
+        "urdf-layer": {
+          "visible": true,
+          "frameLocked": false,
+          "label": "Robot",
+          "instanceId": "urdf-layer",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "topic",
+          "topic": "/robot_description",
+          "framePrefix": "",
+          "displayMode": "auto",
+          "order": 2
         }
       },
       "cameraState": {
