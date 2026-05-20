@@ -5,10 +5,8 @@
   Obstacle layout mirrors src/pathfinder_core/tools/generate_demo_map.cpp
   so that the planning octomap and the simulated geometry agree:
 
-    Posts (1 x 1 x 5 m, on the floor):
+    Posts (0.5 x 0.5 x 5 m, on the floor, matches generate_demo_map.cpp exactly):
       (x=2, y=2), (x=5, y=7), (x=8, y=3)
-      (Octomap fills 0.5 x 0.5 columns at those centers; the SDF visual is
-      slightly fatter at 1 m for legibility — keep the centers aligned.)
 
     Overhangs (2 x 2 x 0.5 m slabs centered at z=2.25, spanning z in [2.0, 2.5]):
       center (4, 5),   matches octomap fill (3,4)-(5,6)
@@ -90,10 +88,10 @@
       <pose>2 2 2.5 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><box><size>1 1 5</size></box></geometry>
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry><box><size>1 1 5</size></box></geometry>
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
           <material>
             <ambient>0.5 0.3 0.2 1</ambient>
             <diffuse>0.6 0.4 0.3 1</diffuse>
@@ -107,10 +105,10 @@
       <pose>5 7 2.5 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><box><size>1 1 5</size></box></geometry>
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry><box><size>1 1 5</size></box></geometry>
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
           <material>
             <ambient>0.5 0.3 0.2 1</ambient>
             <diffuse>0.6 0.4 0.3 1</diffuse>
@@ -124,10 +122,10 @@
       <pose>8 3 2.5 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><box><size>1 1 5</size></box></geometry>
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry><box><size>1 1 5</size></box></geometry>
+          <geometry><box><size>0.5 0.5 5</size></box></geometry>
           <material>
             <ambient>0.5 0.3 0.2 1</ambient>
             <diffuse>0.6 0.4 0.3 1</diffuse>
