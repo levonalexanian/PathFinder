@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<!-- Gazebo-side model for the pathfinder cheater drone.
+     Carries the VelocityControl plugin (cmd_vel -> link velocity).
+     ROS-side TF/visualization is driven by urdf/drone.urdf. -->
+<sdf version="1.9">
+  <model name="pathfinder_drone">
+    <pose>0 0 0.5 0 0 0</pose>
+
+    <link name="base_link">
+      <!-- Holonomic cheater: gravity off so a zero Twist holds altitude. -->
+      <gravity>false</gravity>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.0125</ixx>
+          <iyy>0.0125</iyy>
+          <izz>0.0225</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="base_visual">
+        <geometry>
+          <box>
+            <size>0.30 0.30 0.10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
+      </visual>
+      <collision name="base_collision">
+        <geometry>
+          <box>
+            <size>0.30 0.30 0.10</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="rotor_fl_visual">
+        <pose>0.13 0.13 0.06 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.06</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.7 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_fr_visual">
+        <pose>0.13 -0.13 0.06 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.06</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.7 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_rl_visual">
+        <pose>-0.13 0.13 0.06 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.06</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.7 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor_rr_visual">
+        <pose>-0.13 -0.13 0.06 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.06</radius>
+            <length>0.02</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.7 0.7 0.7 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- cmd_vel (gz.msgs.Twist) -> base_link velocity. Topic remapped to /cmd_vel. -->
+    <plugin filename="gz-sim-velocity-control-system"
+            name="gz::sim::systems::VelocityControl">
+      <topic>cmd_vel</topic>
+    </plugin>
+
+    <!-- Publish pose updates on /model/pathfinder_drone/pose for the ROS bridge. -->
+    <plugin filename="gz-sim-pose-publisher-system"
+            name="gz::sim::systems::PosePublisher">
+      <publish_link_pose>false</publish_link_pose>
+      <publish_visual_pose>false</publish_visual_pose>
+      <publish_collision_pose>false</publish_collision_pose>
+      <publish_nested_model_pose>false</publish_nested_model_pose>
+      <publish_model_pose>true</publish_model_pose>
+      <update_frequency>50</update_frequency>
+    </plugin>
+  </model>
+</sdf>
