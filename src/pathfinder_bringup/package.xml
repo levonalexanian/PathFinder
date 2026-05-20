@@ -10,9 +10,9 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>pathfinder_core</exec_depend>
-  <exec_depend>pathfinder_astar</exec_depend>
-  <exec_depend>pathfinder_dijkstra</exec_depend>
-  <exec_depend>pathfinder_rrt</exec_depend>
+  <exec_depend>pathfinder_algo_astar</exec_depend>
+  <exec_depend>pathfinder_algo_dijkstra</exec_depend>
+  <exec_depend>pathfinder_algo_rrt</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
   <exec_depend>ros2launch</exec_depend>
 

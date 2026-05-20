@@ -8,9 +8,9 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    astar_share = get_package_share_directory("pathfinder_astar")
-    dijkstra_share = get_package_share_directory("pathfinder_dijkstra")
-    rrt_share = get_package_share_directory("pathfinder_rrt")
+    astar_share = get_package_share_directory("pathfinder_algo_astar")
+    dijkstra_share = get_package_share_directory("pathfinder_algo_dijkstra")
+    rrt_share = get_package_share_directory("pathfinder_algo_rrt")
 
     use_sim_time = LaunchConfiguration("use_sim_time")
     robot_radius = LaunchConfiguration("robot_radius")

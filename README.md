@@ -85,7 +85,7 @@ Nine ROS2 packages under `src/`:
 - `pathfinder_msgs` — custom messages + `RequestPath.action`
 - `pathfinder_core` — abstract planner base class, scheduler, map publisher, shared voxel-grid utilities
 - `pathfinder_bringup` — launch composition
-- `pathfinder_drone`, `pathfinder_car` — robot models + path followers
-- `pathfinder_astar`, `pathfinder_dijkstra`, `pathfinder_rrt`, `pathfinder_dstar_lite` — the four planning algorithms
+- `pathfinder_robot_drone`, `pathfinder_robot_car` — robot models + path followers
+- `pathfinder_algo_astar`, `pathfinder_algo_dijkstra`, `pathfinder_algo_rrt`, `pathfinder_algo_dstar_lite` — the four planning algorithms
 
 CI (`.github/workflows/ci.yml`) builds + tests on push and PR.

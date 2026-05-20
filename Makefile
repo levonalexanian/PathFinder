@@ -47,30 +47,30 @@ test:
 launch: launch-drone
 
 launch-drone:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_drone drone.launch.py'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_drone drone.launch.py'
 
 launch-drone-headless:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_drone drone.launch.py headless:=true'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_drone drone.launch.py headless:=true'
 
 launch-headless: launch-drone-headless
 
 launch-car:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_car car.launch.py'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_car car.launch.py'
 
 launch-car-headless:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_car car.launch.py headless:=true'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_robot_car car.launch.py headless:=true'
 
 launch-base:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup base.launch.py'
 
 launch-astar:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_astar astar.launch.py'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_algo_astar astar.launch.py'
 
 launch-dijkstra:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_dijkstra dijkstra.launch.py'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_algo_dijkstra dijkstra.launch.py'
 
 launch-rrt:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_rrt rrt.launch.py'
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_algo_rrt rrt.launch.py'
 
 launch-algos:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup algos.launch.py'
@@ -85,10 +85,10 @@ generate-map:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && mkdir -p maps && ros2 run pathfinder_core generate_demo_map maps/demo_world.bt'
 
 regenerate-drone-description:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_drone/urdf/drone.urdf.xacro -o src/pathfinder_drone/urdf/drone.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_drone/urdf'
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_robot_drone/urdf/drone.urdf.xacro -o src/pathfinder_robot_drone/urdf/drone.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_robot_drone/urdf'
 
 regenerate-car-description:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_car/urdf/car.urdf.xacro -o src/pathfinder_car/urdf/car.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_car/urdf'
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_robot_car/urdf/car.urdf.xacro -o src/pathfinder_robot_car/urdf/car.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_robot_car/urdf'
 
 sh:
 	$(DEV_TTY) bash

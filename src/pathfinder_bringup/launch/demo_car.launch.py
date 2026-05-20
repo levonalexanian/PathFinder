@@ -8,7 +8,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    car_share = get_package_share_directory("pathfinder_car")
+    car_share = get_package_share_directory("pathfinder_robot_car")
     bringup_share = get_package_share_directory("pathfinder_bringup")
 
     headless = LaunchConfiguration("headless")
