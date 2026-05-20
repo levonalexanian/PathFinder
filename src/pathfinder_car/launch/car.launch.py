@@ -98,7 +98,7 @@ def generate_launch_description():
         arguments=[
             "-file", car_sdf_path,
             "-name", "pathfinder_car",
-            "-x", "0.5", "-y", "0.5", "-z", "0.05",
+            "-x", "0.5", "-y", "0.5", "-z", "0.145",
         ],
     )
 
