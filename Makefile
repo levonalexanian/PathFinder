@@ -4,7 +4,7 @@ DEV_TTY := $(COMPOSE) run --rm --service-ports dev
 
 TOOLCHAIN := /workspace/build/conan_toolchain.cmake
 
-.PHONY: help image-build install build test launch launch-headless launch-base generate-map regenerate-drone-description sh down clean
+.PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base generate-map regenerate-drone-description regenerate-car-description sh down clean
 
 help:
 	@echo "ros2_pathfinder make targets:"
@@ -14,8 +14,13 @@ help:
 	@echo "  test                         colcon test inside the container"
 	@echo "  generate-map                 Generate maps/demo_world.bt via pathfinder_core"
 	@echo "  regenerate-drone-description Regenerate drone.urdf from drone.urdf.xacro"
-	@echo "  launch                       Launch the full drone bringup (Gazebo + planner)"
-	@echo "  launch-headless              Same as launch but server-only with headless rendering"
+	@echo "  regenerate-car-description   Regenerate car.urdf from car.urdf.xacro"
+	@echo "  launch                       Alias for launch-drone (default robot)"
+	@echo "  launch-drone                 Launch the full drone bringup (Gazebo + planner)"
+	@echo "  launch-drone-headless        Same as launch-drone but server-only with headless rendering"
+	@echo "  launch-headless              Alias for launch-drone-headless"
+	@echo "  launch-car                   Launch the full car bringup (Gazebo + planner)"
+	@echo "  launch-car-headless          Same as launch-car but server-only with headless rendering"
 	@echo "  launch-base                  Launch just the base bringup (no Gazebo) for diagnostics"
 	@echo "  sh                           Open an interactive shell in the dev container"
 	@echo "  down                         Stop and remove containers"
@@ -33,11 +38,21 @@ build:
 test:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon test && colcon test-result --verbose'
 
-launch:
+launch: launch-drone
+
+launch-drone:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_drone drone.launch.py'
 
-launch-headless:
+launch-drone-headless:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_drone drone.launch.py headless:=true'
+
+launch-headless: launch-drone-headless
+
+launch-car:
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_car car.launch.py'
+
+launch-car-headless:
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_car car.launch.py headless:=true'
 
 launch-base:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup base.launch.py'
@@ -47,6 +62,9 @@ generate-map:
 
 regenerate-drone-description:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_drone/urdf/drone.urdf.xacro -o src/pathfinder_drone/urdf/drone.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_drone/urdf'
+
+regenerate-car-description:
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_car/urdf/car.urdf.xacro -o src/pathfinder_car/urdf/car.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_car/urdf'
 
 sh:
 	$(DEV_TTY) bash
