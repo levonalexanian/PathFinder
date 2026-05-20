@@ -2,6 +2,7 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,7 @@ public:
     declare_parameter<double>("max_speed", 1.5);
     declare_parameter<double>("waypoint_tolerance", 0.2);
     declare_parameter<double>("update_rate", 20.0);
+    declare_parameter<double>("hold_down_seconds", 1.5);
     declare_parameter<std::string>("map_frame", "map");
     declare_parameter<std::string>("base_frame", "base_link");
 
@@ -34,6 +36,7 @@ public:
     max_speed_ = get_parameter("max_speed").as_double();
     waypoint_tolerance_ = get_parameter("waypoint_tolerance").as_double();
     const double rate = get_parameter("update_rate").as_double();
+    hold_down_seconds_ = get_parameter("hold_down_seconds").as_double();
     map_frame_ = get_parameter("map_frame").as_string();
     base_frame_ = get_parameter("base_frame").as_string();
 
@@ -52,8 +55,8 @@ public:
 
     RCLCPP_INFO(
       get_logger(),
-      "path_follower up: k_p=%.2f max_speed=%.2f tol=%.2f rate=%.1fHz map=%s base=%s",
-      k_p_, max_speed_, waypoint_tolerance_, rate,
+      "path_follower up: k_p=%.2f max_speed=%.2f tol=%.2f rate=%.1fHz hold=%.2fs map=%s base=%s",
+      k_p_, max_speed_, waypoint_tolerance_, rate, hold_down_seconds_,
       map_frame_.c_str(), base_frame_.c_str());
   }
 
@@ -63,6 +66,7 @@ private:
     std::lock_guard<std::mutex> lk(state_mutex_);
     waypoints_ = msg->poses;
     current_idx_ = 0;
+    hold_down_end_time_.reset();
     RCLCPP_INFO(
       get_logger(), "received path with %zu waypoint(s)", waypoints_.size());
   }
@@ -71,14 +75,25 @@ private:
   {
     std::vector<geometry_msgs::msg::PoseStamped> waypoints;
     std::size_t idx;
+    std::optional<rclcpp::Time> hold_end;
     {
       std::lock_guard<std::mutex> lk(state_mutex_);
       waypoints = waypoints_;
       idx = current_idx_;
+      hold_end = hold_down_end_time_;
+    }
+
+    if (hold_end.has_value()) {
+      if (now() < hold_end.value()) {
+        publish_stop();
+      } else {
+        std::lock_guard<std::mutex> lk(state_mutex_);
+        hold_down_end_time_.reset();
+      }
+      return;
     }
 
     if (waypoints.empty() || idx >= waypoints.size()) {
-      publish_stop();
       return;
     }
 
@@ -107,6 +122,9 @@ private:
         std::lock_guard<std::mutex> lk(state_mutex_);
         ++current_idx_;
         finished = current_idx_ >= waypoints_.size();
+        if (finished) {
+          hold_down_end_time_ = now() + rclcpp::Duration::from_seconds(hold_down_seconds_);
+        }
       }
       RCLCPP_INFO(
         get_logger(),
@@ -143,12 +161,14 @@ private:
   double k_p_{1.0};
   double max_speed_{1.5};
   double waypoint_tolerance_{0.2};
+  double hold_down_seconds_{1.5};
   std::string map_frame_;
   std::string base_frame_;
 
   std::mutex state_mutex_;
   std::vector<geometry_msgs::msg::PoseStamped> waypoints_;
   std::size_t current_idx_{0};
+  std::optional<rclcpp::Time> hold_down_end_time_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
