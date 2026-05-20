@@ -69,14 +69,16 @@
       </collision>
     </link>
 
-    <!-- Left/right drive wheels mounted at y = +-0.16, z = -0.045 relative to base -->
+    <!-- Drive wheels: cylinder geometry is oriented inside the visual/collision (pose rpy
+         pi/2 around x), so the wheel link frame stays aligned with the model and the
+         joint axis lives unambiguously in the link's own y-axis. -->
     <link name="wheel_left">
-      <pose>0 0.16 -0.045 1.5707963267948966 0 0</pose>
+      <pose>0 0.16 -0.045 0 0 0</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
-          <ixx>7.583333333333335e-05</ixx>
-          <iyy>0.00012500000000000003</iyy>
+          <ixx>0.00012500000000000003</ixx>
+          <iyy>7.583333333333335e-05</iyy>
           <izz>7.583333333333335e-05</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
@@ -84,6 +86,7 @@
         </inertia>
       </inertial>
       <visual name="wheel_left_visual">
+        <pose>0 0 0 1.5707963267948966 0 0</pose>
         <geometry>
           <cylinder>
             <radius>0.05</radius>
@@ -96,6 +99,7 @@
         </material>
       </visual>
       <collision name="wheel_left_collision">
+        <pose>0 0 0 1.5707963267948966 0 0</pose>
         <geometry>
           <cylinder>
             <radius>0.05</radius>
@@ -114,12 +118,12 @@
     </link>
 
     <link name="wheel_right">
-      <pose>0 -0.16 -0.045 1.5707963267948966 0 0</pose>
+      <pose>0 -0.16 -0.045 0 0 0</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
-          <ixx>7.583333333333335e-05</ixx>
-          <iyy>0.00012500000000000003</iyy>
+          <ixx>0.00012500000000000003</ixx>
+          <iyy>7.583333333333335e-05</iyy>
           <izz>7.583333333333335e-05</izz>
           <ixy>0</ixy>
           <ixz>0</ixz>
@@ -127,6 +131,7 @@
         </inertia>
       </inertial>
       <visual name="wheel_right_visual">
+        <pose>0 0 0 1.5707963267948966 0 0</pose>
         <geometry>
           <cylinder>
             <radius>0.05</radius>
@@ -139,6 +144,7 @@
         </material>
       </visual>
       <collision name="wheel_right_collision">
+        <pose>0 0 0 1.5707963267948966 0 0</pose>
         <geometry>
           <cylinder>
             <radius>0.05</radius>
@@ -156,12 +162,11 @@
       </collision>
     </link>
 
-    <!-- Continuous joints about y-axis in the wheel's local (rotated) frame: link rotates about z post-rotation -->
     <joint name="left_wheel_joint" type="revolute">
       <parent>base_link</parent>
       <child>wheel_left</child>
       <axis>
-        <xyz expressed_in="__model__">0 1 0</xyz>
+        <xyz>0 1 0</xyz>
         <limit>
           <lower>-1e16</lower>
           <upper>1e16</upper>
@@ -176,7 +181,7 @@
       <parent>base_link</parent>
       <child>wheel_right</child>
       <axis>
-        <xyz expressed_in="__model__">0 1 0</xyz>
+        <xyz>0 1 0</xyz>
         <limit>
           <lower>-1e16</lower>
           <upper>1e16</upper>
