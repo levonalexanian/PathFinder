@@ -7,7 +7,7 @@ TOOLCHAIN := /workspace/build/conan_toolchain.cmake
 .PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base launch-astar launch-dijkstra launch-rrt launch-algos launch-demo-drone launch-demo-car generate-map regenerate-drone-description regenerate-car-description sh down clean
 
 help:
-	@echo "ros2_pathfinder make targets:"
+	@echo "PathFinder make targets:"
 	@echo "  image-build                  Build the dev container image"
 	@echo "  install                      Run conan install inside the container"
 	@echo "  build                        colcon build inside the container"

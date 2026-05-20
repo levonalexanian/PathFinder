@@ -3,7 +3,7 @@
 <package format="3">
   <name>pathfinder_msgs</name>
   <version>0.1.0</version>
-  <description>Messages and actions for the ros2_pathfinder project.</description>
+  <description>Messages and actions for the PathFinder project.</description>
   <maintainer email="levon.alexanian10@gmail.com">Levon Alexanian</maintainer>
   <license>MIT</license>
 

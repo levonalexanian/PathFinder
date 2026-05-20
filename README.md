@@ -1,4 +1,4 @@
-# ros2_pathfinder
+# PathFinder
 
 ROS2 Jazzy C++ showcase of four pathfinding algorithms (A\*, Dijkstra, RRT\*, D\* Lite) planning through a 3D voxel map in Gazebo Harmonic, visualized in Foxglove Studio. Two robots: a holonomic drone and a diff-drive car.
 
@@ -16,7 +16,7 @@ That's it. ROS2 Jazzy, Gazebo Harmonic, Conan 2, the C++ toolchain, and all depe
 
 ```bash
 git clone <this-repo>
-cd ros2_pathfinder
+cd PathFinder
 make image-build      # builds the dev container (~5-10 min, one-time)
 make install          # runs conan install inside the container
 make build            # colcon build of all 9 packages (~1 min)

@@ -3,7 +3,7 @@
 <package format="3">
   <name>pathfinder_car</name>
   <version>0.1.0</version>
-  <description>Diff-drive ground car: URDF, Gazebo world, path follower for ros2_pathfinder.</description>
+  <description>Diff-drive ground car: URDF, Gazebo world, path follower for PathFinder.</description>
   <maintainer email="levon.alexanian10@gmail.com">Levon Alexanian</maintainer>
   <license>MIT</license>
 

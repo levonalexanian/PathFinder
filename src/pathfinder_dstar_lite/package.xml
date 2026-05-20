@@ -3,7 +3,7 @@
 <package format="3">
   <name>pathfinder_dstar_lite</name>
   <version>0.1.0</version>
-  <description>D* Lite (incremental replanning) 3D voxel-grid path planner action server for ros2_pathfinder.</description>
+  <description>D* Lite (incremental replanning) 3D voxel-grid path planner action server for PathFinder.</description>
   <maintainer email="levon.alexanian10@gmail.com">Levon Alexanian</maintainer>
   <license>MIT</license>
 

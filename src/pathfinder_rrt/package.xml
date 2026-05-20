@@ -3,7 +3,7 @@
 <package format="3">
   <name>pathfinder_rrt</name>
   <version>0.1.0</version>
-  <description>RRT* sampling-based 3D planner node for ros2_pathfinder.</description>
+  <description>RRT* sampling-based 3D planner node for PathFinder.</description>
   <maintainer email="levon.alexanian10@gmail.com">Levon Alexanian</maintainer>
   <license>MIT</license>
 

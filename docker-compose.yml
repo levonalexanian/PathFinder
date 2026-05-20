@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
-    image: ros2_pathfinder-dev
+    image: pathfinder-dev
     working_dir: /workspace
     volumes:
       - .:/workspace

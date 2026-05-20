@@ -3,7 +3,7 @@
 <package format="3">
   <name>pathfinder_astar</name>
   <version>0.1.0</version>
-  <description>A* (A-star) 3D voxel-grid path planner action server for ros2_pathfinder.</description>
+  <description>A* (A-star) 3D voxel-grid path planner action server for PathFinder.</description>
   <maintainer email="levon.alexanian10@gmail.com">Levon Alexanian</maintainer>
   <license>MIT</license>
 
