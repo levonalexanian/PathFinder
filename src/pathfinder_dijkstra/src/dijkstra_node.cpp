@@ -197,8 +197,7 @@ protected:
       return;
     }
 
-    DijkstraGrid grid(*tree);
-    grid.inflate(robot_radius);
+    DijkstraGrid grid(*tree, robot_radius);
     delete tree;
 
     PlanRequest req{};

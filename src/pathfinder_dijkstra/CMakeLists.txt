@@ -22,7 +22,10 @@ find_package(std_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OCTOMAP REQUIRED octomap)
 
-add_executable(dijkstra_node src/dijkstra_node.cpp)
+add_executable(dijkstra_node
+  src/dijkstra_node.cpp
+  src/dijkstra_grid.cpp
+)
 target_include_directories(dijkstra_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${OCTOMAP_INCLUDE_DIRS}
