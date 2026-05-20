@@ -7,8 +7,11 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <octomap_msgs/msg/octomap.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <pathfinder_msgs/msg/algorithm_selection.hpp>
 #include <pathfinder_msgs/msg/planner_status.hpp>
@@ -32,10 +35,14 @@ public:
   using GoalHandle = rclcpp_action::ClientGoalHandle<RequestPath>;
 
   SchedulerNode()
-  : rclcpp::Node("scheduler")
+  : rclcpp::Node("scheduler"),
+    tf_buffer_(get_clock()),
+    tf_listener_(tf_buffer_)
   {
     declare_parameter<std::string>("default_algorithm", "astar");
+    declare_parameter<std::string>("base_frame", "base_link");
     active_algorithm_ = get_parameter("default_algorithm").as_string();
+    base_frame_ = get_parameter("base_frame").as_string();
 
     status_pub_ = create_publisher<pathfinder_msgs::msg::PlannerStatus>(
       kPlannerStatusTopic, rclcpp::QoS(10));
@@ -131,9 +138,27 @@ private:
       return;
     }
 
+    geometry_msgs::msg::TransformStamped tf;
+    try {
+      tf = tf_buffer_.lookupTransform(
+        map_frame_, base_frame_, tf2::TimePointZero);
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(
+        get_logger(),
+        "no %s->%s transform yet (%s); skipping goal",
+        map_frame_.c_str(), base_frame_.c_str(), e.what());
+      planning_ = false;
+      return;
+    }
+
     RequestPath::Goal goal_msg;
     goal_msg.goal = *goal_pose;
-    goal_msg.start.header = goal_pose->header;
+    goal_msg.start.header.stamp = now();
+    goal_msg.start.header.frame_id = map_frame_;
+    goal_msg.start.pose.position.x = tf.transform.translation.x;
+    goal_msg.start.pose.position.y = tf.transform.translation.y;
+    goal_msg.start.pose.position.z = tf.transform.translation.z;
+    goal_msg.start.pose.orientation = tf.transform.rotation;
 
     auto opts = rclcpp_action::Client<RequestPath>::SendGoalOptions{};
     opts.feedback_callback =
@@ -179,11 +204,15 @@ private:
 
   std::string active_algorithm_;
   std::string map_frame_ = "map";
+  std::string base_frame_ = "base_link";
   bool have_map_ = false;
   bool planning_ = false;
   double last_plan_duration_ms_ = 0.0;
 
   std::mutex state_mutex_;
+
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 
   rclcpp::Subscription<pathfinder_msgs::msg::AlgorithmSelection>::SharedPtr algorithm_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;

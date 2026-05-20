@@ -19,6 +19,8 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OCTOMAP REQUIRED octomap)
 
@@ -44,6 +46,8 @@ ament_target_dependencies(scheduler_node
   octomap_msgs
   nav_msgs
   geometry_msgs
+  tf2
+  tf2_ros
 )
 
 add_executable(map_publisher_node src/map_publisher_node.cpp)
