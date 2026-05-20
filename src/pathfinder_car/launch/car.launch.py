@@ -116,7 +116,7 @@ def generate_launch_description():
     )
 
     pose_relay = Node(
-        package="pathfinder_car",
+        package="pathfinder_core",
         executable="gz_pose_relay_node",
         name="gz_pose_relay",
         output="screen",

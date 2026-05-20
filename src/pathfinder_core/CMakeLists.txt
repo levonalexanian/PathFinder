@@ -46,6 +46,15 @@ ament_target_dependencies(scheduler_node
   octomap_msgs
   nav_msgs
   geometry_msgs
+  visualization_msgs
+  tf2
+  tf2_ros
+)
+
+add_executable(gz_pose_relay_node src/gz_pose_relay_node.cpp)
+ament_target_dependencies(gz_pose_relay_node
+  rclcpp
+  geometry_msgs
   tf2
   tf2_ros
 )
@@ -71,7 +80,7 @@ install(
 )
 
 install(
-  TARGETS scheduler_node map_publisher_node generate_demo_map
+  TARGETS scheduler_node gz_pose_relay_node map_publisher_node generate_demo_map
   DESTINATION lib/${PROJECT_NAME}
 )
 

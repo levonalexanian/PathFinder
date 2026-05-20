@@ -6,7 +6,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
-namespace pathfinder_car
+namespace pathfinder_core
 {
 
 class GzPoseRelayNode : public rclcpp::Node
@@ -16,7 +16,7 @@ public:
   : rclcpp::Node("gz_pose_relay"),
     broadcaster_(*this)
   {
-    declare_parameter<std::string>("source_topic", "/model/pathfinder_car/pose");
+    declare_parameter<std::string>("source_topic", "/model/robot/pose");
     declare_parameter<std::string>("parent_frame", "map");
     declare_parameter<std::string>("child_frame", "base_link");
 
@@ -60,12 +60,12 @@ private:
   tf2_ros::TransformBroadcaster broadcaster_;
 };
 
-}  // namespace pathfinder_car
+}  // namespace pathfinder_core
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<pathfinder_car::GzPoseRelayNode>());
+  rclcpp::spin(std::make_shared<pathfinder_core::GzPoseRelayNode>());
   rclcpp::shutdown();
   return 0;
 }
