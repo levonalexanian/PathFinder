@@ -24,8 +24,8 @@ jobs:
       - name: Build
         run: |
           source /opt/ros/jazzy/setup.bash
-          TOOLCHAIN=$(find build -name conan_toolchain.cmake | head -1)
-          colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN
+          TOOLCHAIN="$(pwd)/build/conan_toolchain.cmake"
+          colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN"
         shell: bash
       - name: Test
         run: |
