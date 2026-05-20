@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    use_sim_time: false
+    robot_radius: 0.25
+    max_plan_time_sec: 5.0
+    feedback_every_nodes: 200
+    feedback_every_seconds: 0.2
