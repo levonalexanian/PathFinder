@@ -12,6 +12,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <octomap/octomap.h>
+#include <octomap/OcTree.h>
 #include <octomap_msgs/conversions.h>
 #include <octomap_msgs/msg/octomap.hpp>
 #include <std_msgs/msg/color_rgba.hpp>
@@ -19,6 +20,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <pathfinder_core/planner_action_server_base.hpp>
+#include <pathfinder_core/voxel_grid.hpp>
 #include <pathfinder_rrt/rrt_star.hpp>
 
 namespace pathfinder_rrt
@@ -125,7 +127,8 @@ protected:
       goal.goal.pose.position.y,
       goal.goal.pose.position.z};
 
-    RRTStar rrt(*octree, params);
+    pathfinder_core::InflatedVoxelGrid grid(*octree, params.robot_radius);
+    RRTStar rrt(grid, params);
 
     if (rrt.point_collision(start)) {
       result.success = false;
