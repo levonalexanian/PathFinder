@@ -4,11 +4,10 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <memory>
 #include <random>
 #include <vector>
 
-#include <octomap/octomap.h>
+#include <pathfinder_core/voxel_grid.hpp>
 
 namespace pathfinder_rrt
 {
@@ -51,21 +50,13 @@ struct RRTStarParams
 class RRTStar
 {
 public:
-  RRTStar(const octomap::OcTree & tree, const RRTStarParams & params)
-  : tree_(tree), params_(params), rng_(params.random_seed)
+  RRTStar(const pathfinder_core::InflatedVoxelGrid & grid, const RRTStarParams & params)
+  : grid_(grid), params_(params), rng_(params.random_seed)
   {
-    double mx, my, mz, Mx, My, Mz;
-    tree_.getMetricMin(mx, my, mz);
-    tree_.getMetricMax(Mx, My, Mz);
-    min_bound_ = {mx, my, mz};
-    max_bound_ = {Mx, My, Mz};
-    resolution_ = tree_.getResolution();
-    collision_step_ = std::max(resolution_ * 0.5, 1e-3);
-
-    inflation_voxels_ = static_cast<int>(std::ceil(params_.robot_radius / resolution_));
-    if (inflation_voxels_ < 0) {
-      inflation_voxels_ = 0;
-    }
+    const auto mn = grid_.min_bound();
+    const auto mx = grid_.max_bound();
+    min_bound_ = {mn[0], mn[1], mn[2]};
+    max_bound_ = {mx[0], mx[1], mx[2]};
   }
 
   void add_node(const Point3 & p, int parent_idx, double cost)
@@ -139,55 +130,15 @@ public:
 
   bool point_collision(const Point3 & p) const
   {
-    if (inflation_voxels_ == 0) {
-      auto * node = tree_.search(p.x, p.y, p.z);
-      if (node && tree_.isNodeOccupied(node)) {
-        return true;
-      }
-      return false;
-    }
-    const double r = params_.robot_radius;
-    const double r2 = r * r;
-    for (int ix = -inflation_voxels_; ix <= inflation_voxels_; ++ix) {
-      for (int iy = -inflation_voxels_; iy <= inflation_voxels_; ++iy) {
-        for (int iz = -inflation_voxels_; iz <= inflation_voxels_; ++iz) {
-          const double ox = ix * resolution_;
-          const double oy = iy * resolution_;
-          const double oz = iz * resolution_;
-          if (ox * ox + oy * oy + oz * oz > r2) {
-            continue;
-          }
-          auto * node = tree_.search(p.x + ox, p.y + oy, p.z + oz);
-          if (node && tree_.isNodeOccupied(node)) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
+    return grid_.is_occupied_at_point(p.x, p.y, p.z);
   }
 
   bool segment_collision_free(const Point3 & a, const Point3 & b) const
   {
-    const double d = distance(a, b);
-    if (d < 1e-9) {
-      return !point_collision(a);
+    if (!point_in_bounds(a) || !point_in_bounds(b)) {
+      return false;
     }
-    const int steps = std::max(1, static_cast<int>(std::ceil(d / collision_step_)));
-    for (int i = 0; i <= steps; ++i) {
-      const double t = static_cast<double>(i) / steps;
-      Point3 p{
-        a.x + (b.x - a.x) * t,
-        a.y + (b.y - a.y) * t,
-        a.z + (b.z - a.z) * t};
-      if (!point_in_bounds(p)) {
-        return false;
-      }
-      if (point_collision(p)) {
-        return false;
-      }
-    }
-    return true;
+    return grid_.is_segment_free(a.x, a.y, a.z, b.x, b.y, b.z);
   }
 
   int choose_parent(const std::vector<int> & near, const Point3 & x_new, int fallback_parent) const
@@ -242,7 +193,7 @@ public:
 
   const Point3 & min_bound() const { return min_bound_; }
   const Point3 & max_bound() const { return max_bound_; }
-  double resolution() const { return resolution_; }
+  double resolution() const { return grid_.resolution(); }
 
 private:
   void propagate_cost_decrease(int root_idx, double delta)
@@ -262,15 +213,12 @@ private:
     }
   }
 
-  const octomap::OcTree & tree_;
+  const pathfinder_core::InflatedVoxelGrid & grid_;
   RRTStarParams params_;
   std::mt19937 rng_;
 
   Point3 min_bound_;
   Point3 max_bound_;
-  double resolution_{0.1};
-  double collision_step_{0.05};
-  int inflation_voxels_{0};
 
   std::vector<TreeNode> tree_nodes_;
 };

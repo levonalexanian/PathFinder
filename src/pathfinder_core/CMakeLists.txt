@@ -26,10 +26,12 @@ pkg_check_modules(OCTOMAP REQUIRED octomap)
 
 add_library(planner_action_server_base
   src/planner_action_server_base.cpp
+  src/voxel_grid.cpp
 )
 target_include_directories(planner_action_server_base PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
+  ${OCTOMAP_INCLUDE_DIRS}
 )
 ament_target_dependencies(planner_action_server_base
   rclcpp
@@ -37,6 +39,8 @@ ament_target_dependencies(planner_action_server_base
   pathfinder_msgs
   octomap_msgs
 )
+target_link_libraries(planner_action_server_base ${OCTOMAP_LIBRARIES})
+target_link_directories(planner_action_server_base PUBLIC ${OCTOMAP_LIBRARY_DIRS})
 
 add_executable(scheduler_node src/scheduler_node.cpp)
 ament_target_dependencies(scheduler_node
