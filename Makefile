@@ -4,7 +4,7 @@ DEV_TTY := $(COMPOSE) run --rm --service-ports dev
 
 TOOLCHAIN := /workspace/build/conan_toolchain.cmake
 
-.PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base launch-astar launch-dijkstra launch-rrt launch-algos launch-demo-drone launch-demo-car generate-map regenerate-drone-description regenerate-car-description sh down clean
+.PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base launch-astar launch-dijkstra launch-dstar_lite launch-rrt launch-algos launch-demo-drone launch-demo-car generate-map regenerate-drone-description regenerate-car-description sh down clean
 
 help:
 	@echo "PathFinder make targets:"
@@ -25,9 +25,10 @@ help:
 	@echo "  launch-astar                 Launch the A* action server only"
 	@echo "  launch-dijkstra              Launch the Dijkstra action server only"
 	@echo "  launch-rrt                   Launch the RRT* action server only"
-	@echo "  launch-algos                 Launch all three planner action servers together"
-	@echo "  launch-demo-drone            Drone bringup + all three planner servers"
-	@echo "  launch-demo-car              Car bringup + all three planner servers"
+	@echo "  launch-dstar_lite            Launch the D* Lite action server only"
+	@echo "  launch-algos                 Launch all four planner action servers together"
+	@echo "  launch-demo-drone            Drone bringup + all four planner servers"
+	@echo "  launch-demo-car              Car bringup + all four planner servers"
 	@echo "  sh                           Open an interactive shell in the dev container"
 	@echo "  down                         Stop and remove containers"
 	@echo "  clean                        Stop containers and remove the local image"
@@ -71,6 +72,9 @@ launch-dijkstra:
 
 launch-rrt:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_algo_rrt rrt.launch.py'
+
+launch-dstar_lite:
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_algo_dstar_lite dstar_lite.launch.py'
 
 launch-algos:
 	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup algos.launch.py'

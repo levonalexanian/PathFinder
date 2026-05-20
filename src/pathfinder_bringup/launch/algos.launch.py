@@ -10,6 +10,7 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     astar_share = get_package_share_directory("pathfinder_algo_astar")
     dijkstra_share = get_package_share_directory("pathfinder_algo_dijkstra")
+    dstar_lite_share = get_package_share_directory("pathfinder_algo_dstar_lite")
     rrt_share = get_package_share_directory("pathfinder_algo_rrt")
 
     use_sim_time = LaunchConfiguration("use_sim_time")
@@ -49,6 +50,13 @@ def generate_launch_description():
         launch_arguments=shared_args,
     )
 
+    dstar_lite_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(dstar_lite_share, "launch", "dstar_lite.launch.py")
+        ),
+        launch_arguments=shared_args,
+    )
+
     rrt_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(rrt_share, "launch", "rrt.launch.py")
@@ -62,5 +70,6 @@ def generate_launch_description():
         declare_max_plan_time_sec,
         astar_launch,
         dijkstra_launch,
+        dstar_lite_launch,
         rrt_launch,
     ])

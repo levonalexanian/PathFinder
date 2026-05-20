@@ -74,7 +74,7 @@ Then publish a new goal. Watch the comparison: Dijkstra explores ~35× more node
 | `make launch-demo-car`               | Same with the car                                                      |
 | `make launch-drone` / `launch-car`   | Just the robot + bridge (no planners)                                  |
 | `make launch-algos`                  | Just the four planner action servers                                   |
-| `make launch-{astar,dijkstra,rrt}`   | Individual planner action server                                       |
+| `make launch-{astar,dijkstra,dstar_lite,rrt}` | Individual planner action server                                  |
 | `make sh`                            | Interactive shell in the dev container                                 |
 | `make down` / `make clean`           | Stop containers / remove image                                         |
 
