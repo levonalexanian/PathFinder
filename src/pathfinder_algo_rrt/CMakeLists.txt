@@ -22,6 +22,21 @@ find_package(std_msgs REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OCTOMAP REQUIRED octomap)
 
+add_library(rrt_core src/rrt_core.cpp)
+target_include_directories(rrt_core PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_include_directories(rrt_core PRIVATE
+  ${OCTOMAP_INCLUDE_DIRS}
+)
+ament_target_dependencies(rrt_core
+  rclcpp
+  pathfinder_core
+)
+target_link_libraries(rrt_core ${OCTOMAP_LIBRARIES})
+target_link_directories(rrt_core PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
 add_executable(rrt_node src/rrt_node.cpp)
 target_include_directories(rrt_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -38,8 +53,16 @@ ament_target_dependencies(rrt_node
   visualization_msgs
   std_msgs
 )
-target_link_libraries(rrt_node ${OCTOMAP_LIBRARIES})
+target_link_libraries(rrt_node rrt_core ${OCTOMAP_LIBRARIES})
 target_link_directories(rrt_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
+
+install(
+  TARGETS rrt_core
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
 install(
   TARGETS rrt_node
