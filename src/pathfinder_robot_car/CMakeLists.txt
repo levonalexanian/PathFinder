@@ -15,6 +15,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(pathfinder_core REQUIRED)
 
 add_executable(path_follower_node src/path_follower_node.cpp)
 ament_target_dependencies(path_follower_node
@@ -23,6 +24,7 @@ ament_target_dependencies(path_follower_node
   nav_msgs
   tf2
   tf2_ros
+  pathfinder_core
 )
 
 install(

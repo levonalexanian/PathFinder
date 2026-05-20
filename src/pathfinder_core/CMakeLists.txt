@@ -105,6 +105,10 @@ ament_export_dependencies(
   rclcpp_action
   pathfinder_msgs
   octomap_msgs
+  geometry_msgs
+  nav_msgs
+  tf2
+  tf2_ros
 )
 
 if(BUILD_TESTING)
