@@ -1,0 +1,34 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:jazzy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build python3-pip python3-colcon-common-extensions \
+            ros-jazzy-octomap-msgs ros-jazzy-octomap-ros
+          pip install "conan>=2,<3" --break-system-packages
+      - name: Conan profile
+        run: conan profile detect --force
+      - name: Conan install
+        run: conan install . --output-folder=build --build=missing -s build_type=Release
+      - name: Build
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          TOOLCHAIN=$(find build -name conan_toolchain.cmake | head -1)
+          colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN
+        shell: bash
+      - name: Test
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test --return-code-on-test-failure
+        shell: bash

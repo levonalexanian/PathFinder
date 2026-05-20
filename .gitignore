@@ -1,0 +1,21 @@
+# colcon artifacts
+build/
+install/
+log/
+
+# Conan / CMake
+.conan/
+CMakeUserPresets.json
+CMakeFiles/
+cmake_install.cmake
+
+# Python
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Environment
+.env
+
+# Foxglove user layouts
+foxglove/layouts/*.json
