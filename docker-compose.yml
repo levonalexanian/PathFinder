@@ -15,11 +15,3 @@ services:
     network_mode: host
     cap_add:
       - SYS_PTRACE
-
-  foxglove:
-    image: husarion/foxglove:1.84.0-20240119
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./foxglove/layouts/default.json:/foxglove/default-layout.json:ro
-    restart: unless-stopped

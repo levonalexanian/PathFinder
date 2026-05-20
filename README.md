@@ -8,9 +8,9 @@ Everything runs inside Docker — you only need these on the host:
 
 - **Docker** with Compose (tested on `docker 29.x`, `compose v5.x`)
 - **make**
-- A modern web browser to open Foxglove Studio at `http://localhost:8080`
+- A modern web browser + a free [Foxglove account](https://app.foxglove.dev/signup) to open `app.foxglove.dev` (visualization runs in the browser; browsers treat `localhost` as a secure context so HTTPS → `ws://localhost:8765` works)
 
-That's it. ROS2 Jazzy, Gazebo Harmonic, Conan 2, the C++ toolchain, and Foxglove Studio all live in containers — no host install of Foxglove is needed.
+That's it. ROS2 Jazzy, Gazebo Harmonic, Conan 2, and the C++ toolchain all live in the dev container. Foxglove Studio is served by Foxglove's hosted web app — no host install needed (and notably, no Foxglove `.deb` is required, which matters on Fedora / other non-Debian distros).
 
 ## First-time setup
 
@@ -32,10 +32,11 @@ make launch-demo-drone   # drone in 3D world with overhangs, vertical posts, low
 make launch-demo-car     # diff-drive car at floor level
 ```
 
-Then open **http://localhost:8080** in your browser (the Foxglove container is started automatically by the launch targets; `foxglove/layouts/default.json` is bind-mounted as the default layout):
+Then open **https://app.foxglove.dev** in your browser:
 
 1. Click **Open connection** → select **Foxglove WebSocket** → connect to `ws://localhost:8765`
-2. You should see the voxel map, the robot's TF tree, and panels for `planner_status` + `algorithm_selection`
+2. **File → Import Layout** → choose `foxglove/layouts/default.json`
+3. You should see the voxel map, the robot's TF tree, and panels for `planner_status` + `algorithm_selection`
 
 ### Send a goal
 
@@ -74,7 +75,6 @@ Then publish a new goal. Watch the comparison: Dijkstra explores ~35× more node
 | `make launch-drone` / `launch-car`   | Just the robot + bridge (no planners)                                  |
 | `make launch-algos`                  | Just the four planner action servers                                   |
 | `make launch-{astar,dijkstra,rrt}`   | Individual planner action server                                       |
-| `make foxglove-up` / `foxglove-down` | Start/stop the Foxglove Studio web container (`http://localhost:8080`) |
 | `make sh`                            | Interactive shell in the dev container                                 |
 | `make down` / `make clean`           | Stop containers / remove image                                         |
 
