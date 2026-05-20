@@ -62,21 +62,21 @@ Then publish a new goal. Watch the comparison: Dijkstra explores ~35× more node
 
 ## Make targets
 
-| Target | Description |
-|---|---|
-| `make image-build` | Build the dev container image |
-| `make install` | `conan install` inside the container |
-| `make build` | `colcon build` all packages |
-| `make test` | `colcon test` |
-| `make generate-map` | Regenerate `maps/demo_world.bt` |
-| `make launch-demo-drone` | Full demo: drone + sim + all planners + Foxglove bridge |
-| `make launch-demo-car` | Same with the car |
-| `make launch-drone` / `launch-car` | Just the robot + bridge (no planners) |
-| `make launch-algos` | Just the four planner action servers |
-| `make launch-{astar,dijkstra,rrt}` | Individual planner action server |
+| Target                               | Description                                                            |
+|--------------------------------------|------------------------------------------------------------------------|
+| `make image-build`                   | Build the dev container image                                          |
+| `make install`                       | `conan install` inside the container                                   |
+| `make build`                         | `colcon build` all packages                                            |
+| `make test`                          | `colcon test`                                                          |
+| `make generate-map`                  | Regenerate `maps/demo_world.bt`                                        |
+| `make launch-demo-drone`             | Full demo: drone + sim + all planners + Foxglove bridge                |
+| `make launch-demo-car`               | Same with the car                                                      |
+| `make launch-drone` / `launch-car`   | Just the robot + bridge (no planners)                                  |
+| `make launch-algos`                  | Just the four planner action servers                                   |
+| `make launch-{astar,dijkstra,rrt}`   | Individual planner action server                                       |
 | `make foxglove-up` / `foxglove-down` | Start/stop the Foxglove Studio web container (`http://localhost:8080`) |
-| `make sh` | Interactive shell in the dev container |
-| `make down` / `make clean` | Stop containers / remove image |
+| `make sh`                            | Interactive shell in the dev container                                 |
+| `make down` / `make clean`           | Stop containers / remove image                                         |
 
 ## What's inside
 
