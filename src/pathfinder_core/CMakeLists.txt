@@ -36,9 +36,24 @@ ament_target_dependencies(planner_action_server_base
   octomap_msgs
 )
 
+add_executable(scheduler_node src/scheduler_node.cpp)
+ament_target_dependencies(scheduler_node
+  rclcpp
+  rclcpp_action
+  pathfinder_msgs
+  octomap_msgs
+  nav_msgs
+  geometry_msgs
+)
+
 install(
   DIRECTORY include/
   DESTINATION include
+)
+
+install(
+  TARGETS scheduler_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(
