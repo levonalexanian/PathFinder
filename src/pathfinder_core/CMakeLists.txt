@@ -50,6 +50,14 @@ ament_target_dependencies(scheduler_node
   tf2_ros
 )
 
+add_executable(gz_pose_relay_node src/gz_pose_relay_node.cpp)
+ament_target_dependencies(gz_pose_relay_node
+  rclcpp
+  geometry_msgs
+  tf2
+  tf2_ros
+)
+
 add_executable(map_publisher_node src/map_publisher_node.cpp)
 ament_target_dependencies(map_publisher_node
   rclcpp
@@ -71,7 +79,7 @@ install(
 )
 
 install(
-  TARGETS scheduler_node map_publisher_node generate_demo_map
+  TARGETS scheduler_node gz_pose_relay_node map_publisher_node generate_demo_map
   DESTINATION lib/${PROJECT_NAME}
 )
 
