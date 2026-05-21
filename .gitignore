@@ -19,4 +19,5 @@ __pycache__/
 
 # Foxglove user layouts
 foxglove/layouts/*.json
-!foxglove/layouts/default.json
+!foxglove/layouts/car.json
+!foxglove/layouts/drone.json
