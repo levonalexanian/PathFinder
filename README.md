@@ -24,8 +24,8 @@ make generate-map
 ## Run the demo
 
 ```bash
-make launch-demo-car     # diff-drive car
-make launch-demo-drone   # holonomic drone
+make launch-car     # diff-drive car
+make launch-drone   # holonomic drone
 ```
 
 Then open **https://app.foxglove.dev**:
@@ -61,11 +61,8 @@ Dijkstra explores ~35× more nodes than A\* on the same path; D\* Lite returns n
 |---|---|
 | `image-build`, `install`, `build`, `test` | Container, deps, colcon |
 | `generate-map` | Regenerate `maps/demo_world.bt` |
-| `launch-demo-{car,drone}` | Full demo (robot + sim + all four planners) |
-| `launch-{car,drone}` | Just the robot bringup |
-| `launch-algos` | Just the four planner action servers |
-| `launch-{astar,dijkstra,dstar_lite,rrt}` | Individual planner |
-| `sh` | Shell in the dev container |
+| `launch-{car,drone}` | Full demo (robot + sim + all four planners) |
+| `sh` | Shell in the dev container (for `ros2 launch …` of individual planners, etc.) |
 | `down`, `clean` | Stop containers / remove image |
 
 ## Layout
