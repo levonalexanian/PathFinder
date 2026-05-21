@@ -35,8 +35,8 @@ make launch-demo-car     # diff-drive car at floor level
 Then open **https://app.foxglove.dev** in your browser:
 
 1. Click **Open connection** → select **Foxglove WebSocket** → connect to `ws://localhost:8765`
-2. **File → Import Layout** → choose `foxglove/layouts/default.json`
-3. You should see the voxel map, the robot's TF tree, and panels for `planner_status` + `algorithm_selection`
+2. **File → Import Layout** → choose `foxglove/layouts/car.json` (or `drone.json` for the drone demo). The two layouts differ only in the URDF URL — Foxglove can't pick the robot dynamically. The layouts fetch the URDF directly from GitHub raw (`refs/heads/chore/cleanup/...`), so the branch must be pushed for the robot mesh to render.
+3. You should see the voxel map (as a height-colored point cloud), the robot URDF following `base_link`, the planned path, and panels for `planner_status` + `algorithm_selection`
 
 ### Send a goal
 
