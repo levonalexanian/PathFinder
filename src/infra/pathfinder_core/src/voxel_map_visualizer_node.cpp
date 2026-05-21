@@ -74,6 +74,10 @@ private:
       return;
     }
 
+    // Expand pruned internal nodes so every leaf has size == resolution.
+    // Without this, leaves at coarser depth render as undersized cubes with visible gaps.
+    tree->expand();
+
     const double res = tree->getResolution();
 
     visualization_msgs::msg::Marker marker;
