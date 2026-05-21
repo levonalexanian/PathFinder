@@ -53,8 +53,8 @@
         "ignoreColladaUpAxis": false
       },
       "transforms": {
-        "frame:map": { "visible": true },
-        "frame:base_link": { "visible": true }
+        "frame:map": { "visible": false },
+        "frame:base_link": { "visible": false }
       },
       "topics": {
         "/voxel_map_markers": {
