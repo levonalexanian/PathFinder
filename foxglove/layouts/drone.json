@@ -54,7 +54,11 @@
       },
       "transforms": {
         "frame:map": { "visible": false },
-        "frame:base_link": { "visible": false }
+        "frame:base_link": { "visible": false },
+        "frame:rotor_fl": { "visible": false },
+        "frame:rotor_fr": { "visible": false },
+        "frame:rotor_rl": { "visible": false },
+        "frame:rotor_rr": { "visible": false }
       },
       "topics": {
         "/voxel_map_markers": {
