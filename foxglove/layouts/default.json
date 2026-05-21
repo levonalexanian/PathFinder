@@ -1,12 +1,12 @@
 {
   "configById": {
-    "3D!scene": {
+    "3D!pfscene": {
       "layers": {
-        "grid-layer": {
+        "f1f1f1f1-1111-4111-8111-aaaaaaaaaaaa": {
           "visible": true,
           "frameLocked": true,
           "label": "Grid",
-          "instanceId": "grid-layer",
+          "instanceId": "f1f1f1f1-1111-4111-8111-aaaaaaaaaaaa",
           "layerId": "foxglove.Grid",
           "size": 10,
           "divisions": 10,
@@ -17,16 +17,20 @@
           "order": 1,
           "drawBehind": false
         },
-        "urdf-layer": {
+        "f2f2f2f2-2222-4222-8222-bbbbbbbbbbbb": {
           "visible": true,
           "frameLocked": false,
-          "label": "Robot",
-          "instanceId": "urdf-layer",
+          "label": "Robot URDF",
+          "instanceId": "f2f2f2f2-2222-4222-8222-bbbbbbbbbbbb",
           "layerId": "foxglove.Urdf",
           "sourceType": "topic",
+          "url": "",
+          "filePath": "",
+          "parameter": "",
           "topic": "/robot_description",
           "framePrefix": "",
           "displayMode": "auto",
+          "fallbackColor": "#ffffff",
           "order": 2
         }
       },
@@ -44,18 +48,31 @@
       },
       "followMode": "follow-pose",
       "followTf": "base_link",
-      "scene": {},
-      "transforms": {},
+      "scene": {
+        "enableStats": false,
+        "ignoreColladaUpAxis": false
+      },
+      "transforms": {
+        "frame:map": { "visible": true },
+        "frame:base_link": { "visible": true }
+      },
       "topics": {
         "/voxel_map_cloud": {
           "visible": true,
           "colorMode": "colormap",
           "colorField": "z",
           "colorMap": "turbo",
-          "pointSize": 6
+          "pointSize": 8,
+          "pointShape": "square"
         },
-        "/planned_path": { "visible": true },
-        "/search_visualization": { "visible": true }
+        "/planned_path": {
+          "visible": true,
+          "gradient": ["#90ff6bff", "#eeff6b80"],
+          "lineWidth": 0.08
+        },
+        "/search_visualization": {
+          "visible": true
+        }
       },
       "publish": {
         "type": "pose",
@@ -69,7 +86,7 @@
       "synchronize": false,
       "imageMode": {}
     },
-    "Plot!status": {
+    "Plot!pfstatus": {
       "paths": [
         {
           "value": "/planner_status.last_plan_duration_ms",
@@ -86,7 +103,7 @@
       "xAxisVal": "timestamp",
       "sidebarDimension": 240
     },
-    "RawMessages!selection": {
+    "RawMessages!pfalgosel": {
       "diffEnabled": false,
       "diffMethod": "custom",
       "diffTopicPath": "",
@@ -99,10 +116,10 @@
   "userNodes": {},
   "playbackConfig": { "speed": 1 },
   "layout": {
-    "first": "3D!scene",
+    "first": "3D!pfscene",
     "second": {
-      "first": "Plot!status",
-      "second": "RawMessages!selection",
+      "first": "Plot!pfstatus",
+      "second": "RawMessages!pfalgosel",
       "direction": "column",
       "splitPercentage": 60
     },
