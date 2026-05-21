@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <map>
 #include <memory>
+#include <sstream>
 
 #include <rclcpp/rclcpp.hpp>
 #include <octomap/octomap.h>
@@ -19,7 +21,7 @@ namespace
 std_msgs::msg::ColorRGBA color_for_height(double z, double z_min, double z_max)
 {
   std_msgs::msg::ColorRGBA c;
-  c.a = 0.85f;
+  c.a = 1.0f;
   const double t = (z_max > z_min) ? std::clamp((z - z_min) / (z_max - z_min), 0.0, 1.0) : 0.5;
   // 4-stop heatmap: blue → cyan → yellow → red
   if (t < 1.0 / 3.0) {
@@ -79,6 +81,8 @@ private:
     tree->expand();
 
     const double res = tree->getResolution();
+    // Slight oversize so adjacent cubes overlap by 2%, masking sub-pixel gaps from rasterization.
+    const double cube_scale = res * 1.02;
 
     visualization_msgs::msg::Marker marker;
     marker.header = msg->header;
@@ -87,9 +91,9 @@ private:
     marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.pose.orientation.w = 1.0;
-    marker.scale.x = res;
-    marker.scale.y = res;
-    marker.scale.z = res;
+    marker.scale.x = cube_scale;
+    marker.scale.y = cube_scale;
+    marker.scale.z = cube_scale;
     marker.frame_locked = true;
 
     double z_min = std::numeric_limits<double>::infinity();
@@ -103,6 +107,7 @@ private:
 
     marker.points.reserve(tree->size());
     marker.colors.reserve(tree->size());
+    std::map<int, size_t> size_histogram;
     for (auto it = tree->begin_leafs(); it != tree->end_leafs(); ++it) {
       if (tree->isNodeOccupied(*it)) {
         geometry_msgs::msg::Point p;
@@ -111,7 +116,14 @@ private:
         p.z = it.getZ();
         marker.points.push_back(p);
         marker.colors.push_back(color_for_height(p.z, z_min, z_max));
+        const int size_mm = static_cast<int>(std::round(it.getSize() * 1000.0));
+        ++size_histogram[size_mm];
       }
+    }
+
+    std::ostringstream hist;
+    for (const auto & [size_mm, count] : size_histogram) {
+      hist << " " << size_mm << "mm=" << count;
     }
 
     visualization_msgs::msg::MarkerArray arr;
@@ -120,8 +132,8 @@ private:
 
     RCLCPP_INFO(
       get_logger(),
-      "republished /voxel_map as /voxel_map_markers (%zu occupied voxels, resolution=%.3f)",
-      arr.markers.front().points.size(), res);
+      "republished /voxel_map as /voxel_map_markers (%zu occupied voxels, resolution=%.3f, cube_scale=%.3f, leaf_sizes:%s)",
+      arr.markers.front().points.size(), res, cube_scale, hist.str().c_str());
   }
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
