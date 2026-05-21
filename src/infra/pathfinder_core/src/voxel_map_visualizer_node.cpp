@@ -1,16 +1,47 @@
+#include <algorithm>
 #include <memory>
-#include <vector>
 
 #include <rclcpp/rclcpp.hpp>
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 #include <octomap_msgs/conversions.h>
 #include <octomap_msgs/msg/octomap.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 namespace pathfinder_core
 {
+
+namespace
+{
+
+std_msgs::msg::ColorRGBA color_for_height(double z, double z_min, double z_max)
+{
+  std_msgs::msg::ColorRGBA c;
+  c.a = 0.85f;
+  const double t = (z_max > z_min) ? std::clamp((z - z_min) / (z_max - z_min), 0.0, 1.0) : 0.5;
+  // 4-stop heatmap: blue → cyan → yellow → red
+  if (t < 1.0 / 3.0) {
+    const double s = t * 3.0;
+    c.r = 0.0f;
+    c.g = static_cast<float>(s);
+    c.b = 1.0f;
+  } else if (t < 2.0 / 3.0) {
+    const double s = (t - 1.0 / 3.0) * 3.0;
+    c.r = static_cast<float>(s);
+    c.g = 1.0f;
+    c.b = static_cast<float>(1.0 - s);
+  } else {
+    const double s = (t - 2.0 / 3.0) * 3.0;
+    c.r = 1.0f;
+    c.g = static_cast<float>(1.0 - s);
+    c.b = 0.0f;
+  }
+  return c;
+}
+
+}  // namespace
 
 class VoxelMapVisualizerNode : public rclcpp::Node
 {
@@ -20,8 +51,8 @@ public:
   {
     const auto qos = rclcpp::QoS(1).reliable().transient_local();
 
-    pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
-      "/voxel_map_cloud", qos);
+    pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
+      "/voxel_map_markers", qos);
 
     sub_ = create_subscription<octomap_msgs::msg::Octomap>(
       "/voxel_map", qos,
@@ -43,48 +74,53 @@ private:
       return;
     }
 
-    std::vector<std::array<float, 3>> points;
-    points.reserve(tree->size());
+    const double res = tree->getResolution();
+
+    visualization_msgs::msg::Marker marker;
+    marker.header = msg->header;
+    marker.ns = "voxel_map";
+    marker.id = 0;
+    marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = res;
+    marker.scale.y = res;
+    marker.scale.z = res;
+    marker.frame_locked = true;
+
+    double z_min = std::numeric_limits<double>::infinity();
+    double z_max = -std::numeric_limits<double>::infinity();
     for (auto it = tree->begin_leafs(); it != tree->end_leafs(); ++it) {
       if (tree->isNodeOccupied(*it)) {
-        points.push_back({
-          static_cast<float>(it.getX()),
-          static_cast<float>(it.getY()),
-          static_cast<float>(it.getZ()),
-        });
+        z_min = std::min(z_min, it.getZ());
+        z_max = std::max(z_max, it.getZ());
       }
     }
 
-    sensor_msgs::msg::PointCloud2 cloud;
-    cloud.header = msg->header;
-    cloud.height = 1;
-    cloud.is_dense = true;
-    cloud.is_bigendian = false;
-
-    sensor_msgs::PointCloud2Modifier modifier(cloud);
-    modifier.setPointCloud2FieldsByString(1, "xyz");
-    modifier.resize(points.size());
-
-    sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
-    sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
-    sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
-    for (const auto & p : points) {
-      *iter_x = p[0];
-      *iter_y = p[1];
-      *iter_z = p[2];
-      ++iter_x;
-      ++iter_y;
-      ++iter_z;
+    marker.points.reserve(tree->size());
+    marker.colors.reserve(tree->size());
+    for (auto it = tree->begin_leafs(); it != tree->end_leafs(); ++it) {
+      if (tree->isNodeOccupied(*it)) {
+        geometry_msgs::msg::Point p;
+        p.x = it.getX();
+        p.y = it.getY();
+        p.z = it.getZ();
+        marker.points.push_back(p);
+        marker.colors.push_back(color_for_height(p.z, z_min, z_max));
+      }
     }
 
-    pub_->publish(cloud);
+    visualization_msgs::msg::MarkerArray arr;
+    arr.markers.push_back(std::move(marker));
+    pub_->publish(arr);
+
     RCLCPP_INFO(
       get_logger(),
-      "republished /voxel_map as /voxel_map_cloud (%zu occupied voxels, resolution=%.3f)",
-      points.size(), tree->getResolution());
+      "republished /voxel_map as /voxel_map_markers (%zu occupied voxels, resolution=%.3f)",
+      arr.markers.front().points.size(), res);
   }
 
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr sub_;
 };
 

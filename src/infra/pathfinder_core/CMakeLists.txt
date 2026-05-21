@@ -78,7 +78,8 @@ add_executable(voxel_map_visualizer_node src/voxel_map_visualizer_node.cpp)
 ament_target_dependencies(voxel_map_visualizer_node
   rclcpp
   octomap_msgs
-  sensor_msgs
+  visualization_msgs
+  std_msgs
 )
 target_include_directories(voxel_map_visualizer_node PRIVATE ${OCTOMAP_INCLUDE_DIRS})
 target_link_libraries(voxel_map_visualizer_node ${OCTOMAP_LIBRARIES})

@@ -57,13 +57,8 @@
         "frame:base_link": { "visible": true }
       },
       "topics": {
-        "/voxel_map_cloud": {
-          "visible": true,
-          "colorMode": "colormap",
-          "colorField": "z",
-          "colorMap": "turbo",
-          "pointSize": 8,
-          "pointShape": "square"
+        "/voxel_map_markers": {
+          "visible": true
         },
         "/planned_path": {
           "visible": true,
