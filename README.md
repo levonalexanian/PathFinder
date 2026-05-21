@@ -1,91 +1,82 @@
 # PathFinder
 
-ROS2 Jazzy C++ showcase of four pathfinding algorithms (A\*, Dijkstra, RRT\*, D\* Lite) planning through a 3D voxel map in Gazebo Harmonic, visualized in Foxglove Studio. Two robots: a holonomic drone and a diff-drive car.
+ROS2 Jazzy C++ showcase of four pathfinding algorithms — A\*, Dijkstra, RRT\*, D\* Lite — planning through a 3D voxel map in Gazebo Harmonic, visualized in Foxglove Studio. Two robots: a holonomic drone and a diff-drive car.
 
 ## Requirements
 
-Everything runs inside Docker — you only need these on the host:
-
-- **Docker** with Compose (tested on `docker 29.x`, `compose v5.x`)
+- **Docker** with Compose
 - **make**
-- A modern web browser + a free [Foxglove account](https://app.foxglove.dev/signup) to open `app.foxglove.dev` (visualization runs in the browser; browsers treat `localhost` as a secure context so HTTPS → `ws://localhost:8765` works)
+- A modern web browser + a free [Foxglove account](https://app.foxglove.dev/signup)
 
-That's it. ROS2 Jazzy, Gazebo Harmonic, Conan 2, and the C++ toolchain all live in the dev container. Foxglove Studio is served by Foxglove's hosted web app — no host install needed (and notably, no Foxglove `.deb` is required, which matters on Fedora / other non-Debian distros).
+ROS2 Jazzy, Gazebo Harmonic, Conan 2, and the C++ toolchain all run in the dev container. Foxglove Studio runs in the browser via `app.foxglove.dev` — no host install needed.
 
 ## First-time setup
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/levonalexanian/PathFinder.git
 cd PathFinder
-make image-build      # builds the dev container (~5-10 min, one-time)
-make install          # runs conan install inside the container
-make build            # colcon build of all 9 packages (~1 min)
-make generate-map     # generates maps/demo_world.bt
+make image-build      # ~5-10 min, one-time
+make install
+make build
+make generate-map
 ```
 
 ## Run the demo
 
-Pick one (both bring up the simulation, all four planners, and the Foxglove bridge):
-
 ```bash
-make launch-demo-drone   # drone in 3D world with overhangs, vertical posts, low tunnel
-make launch-demo-car     # diff-drive car at floor level
+make launch-demo-car     # diff-drive car
+make launch-demo-drone   # holonomic drone
 ```
 
-Then open **https://app.foxglove.dev** in your browser:
+Then open **https://app.foxglove.dev**:
 
-1. Click **Open connection** → select **Foxglove WebSocket** → connect to `ws://localhost:8765`
-2. **File → Import Layout** → choose `foxglove/layouts/car.json` (or `drone.json` for the drone demo). The two layouts differ only in the URDF URL — Foxglove can't pick the robot dynamically. The layouts fetch the URDF directly from GitHub raw (`refs/heads/chore/cleanup/...`), so the branch must be pushed for the robot mesh to render.
-3. You should see the voxel map (as a height-colored point cloud), the robot URDF following `base_link`, the planned path, and panels for `planner_status` + `algorithm_selection`
+1. **Open connection** → **Foxglove WebSocket** → `ws://localhost:8765`
+2. **File → Import Layout** → `foxglove/layouts/car.json` or `drone.json`
+
+The URDF is fetched from GitHub raw, so the branch must be pushed for the robot mesh to render.
 
 ### Send a goal
 
 In another terminal:
 
 ```bash
-make sh                  # interactive shell in the dev container
-# inside the container:
+make sh
 source install/setup.bash
 ros2 topic pub --once /goal_pose geometry_msgs/PoseStamped \
   '{header: {frame_id: map}, pose: {position: {x: 9.0, y: 9.0, z: 1.5}}}'
 ```
 
-The active planner (default `astar`) will plan a path; the robot follows it in Gazebo and Foxglove visualizes everything.
-
-### Switch algorithms on the fly
+### Switch algorithms
 
 ```bash
 ros2 topic pub --once /algorithm_selection pathfinder_msgs/AlgorithmSelection \
-  '{algorithm_name: dijkstra}'    # or astar, rrt, dstar_lite
+  '{algorithm_name: dijkstra}'    # astar, dijkstra, rrt, or dstar_lite
 ```
 
-Then publish a new goal. Watch the comparison: Dijkstra explores ~35× more nodes than A* for the same path; D* Lite returns near-instantly on its second call (incremental).
+Dijkstra explores ~35× more nodes than A\* on the same path; D\* Lite returns near-instantly on its second call (incremental replan).
 
 ## Make targets
 
-| Target                               | Description                                                            |
-|--------------------------------------|------------------------------------------------------------------------|
-| `make image-build`                   | Build the dev container image                                          |
-| `make install`                       | `conan install` inside the container                                   |
-| `make build`                         | `colcon build` all packages                                            |
-| `make test`                          | `colcon test`                                                          |
-| `make generate-map`                  | Regenerate `maps/demo_world.bt`                                        |
-| `make launch-demo-drone`             | Full demo: drone + sim + all planners + Foxglove bridge                |
-| `make launch-demo-car`               | Same with the car                                                      |
-| `make launch-drone` / `launch-car`   | Just the robot + bridge (no planners)                                  |
-| `make launch-algos`                  | Just the four planner action servers                                   |
-| `make launch-{astar,dijkstra,dstar_lite,rrt}` | Individual planner action server                                  |
-| `make sh`                            | Interactive shell in the dev container                                 |
-| `make down` / `make clean`           | Stop containers / remove image                                         |
+| Target | What |
+|---|---|
+| `image-build`, `install`, `build`, `test` | Container, deps, colcon |
+| `generate-map` | Regenerate `maps/demo_world.bt` |
+| `launch-demo-{car,drone}` | Full demo (robot + sim + all four planners) |
+| `launch-{car,drone}` | Just the robot bringup |
+| `launch-algos` | Just the four planner action servers |
+| `launch-{astar,dijkstra,dstar_lite,rrt}` | Individual planner |
+| `sh` | Shell in the dev container |
+| `down`, `clean` | Stop containers / remove image |
 
-## What's inside
+## Layout
 
-Nine ROS2 packages under `src/`:
+```
+src/
+├── algorithms/   pathfinder_algo_{astar,dijkstra,dstar_lite,rrt}
+├── robots/       pathfinder_robot_{car,drone}
+└── infra/        pathfinder_{msgs,core,bringup}
+```
 
-- `pathfinder_msgs` — custom messages + `RequestPath.action`
-- `pathfinder_core` — abstract planner base class, scheduler, map publisher, shared voxel-grid utilities
-- `pathfinder_bringup` — launch composition
-- `pathfinder_robot_drone`, `pathfinder_robot_car` — robot models + path followers
-- `pathfinder_algo_astar`, `pathfinder_algo_dijkstra`, `pathfinder_algo_rrt`, `pathfinder_algo_dstar_lite` — the four planning algorithms
+Each algorithm follows a Node/Core split: a pure C++ library (`*_core`) holds the algorithm and is unit-testable without ROS; a thin ROS Node (`*_node`) wraps it. Parameters live in `config/params.yaml` per package.
 
-CI (`.github/workflows/ci.yml`) builds + tests on push and PR.
+CI builds and tests on push and PR.
