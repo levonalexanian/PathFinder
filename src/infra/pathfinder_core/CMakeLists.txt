@@ -77,13 +77,8 @@ target_link_directories(map_publisher_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
 add_executable(voxel_map_visualizer_node src/voxel_map_visualizer_node.cpp)
 ament_target_dependencies(voxel_map_visualizer_node
   rclcpp
-  octomap_msgs
   visualization_msgs
-  std_msgs
 )
-target_include_directories(voxel_map_visualizer_node PRIVATE ${OCTOMAP_INCLUDE_DIRS})
-target_link_libraries(voxel_map_visualizer_node ${OCTOMAP_LIBRARIES})
-target_link_directories(voxel_map_visualizer_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
 
 add_executable(generate_demo_map tools/generate_demo_map.cpp)
 target_include_directories(generate_demo_map PRIVATE ${OCTOMAP_INCLUDE_DIRS})
