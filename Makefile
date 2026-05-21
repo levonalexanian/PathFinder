@@ -89,10 +89,10 @@ generate-map:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && mkdir -p maps && ros2 run pathfinder_core generate_demo_map maps/demo_world.bt'
 
 regenerate-drone-description:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_robot_drone/urdf/drone.urdf.xacro -o src/pathfinder_robot_drone/urdf/drone.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_robot_drone/urdf'
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/robots/pathfinder_robot_drone/urdf/drone.urdf.xacro -o src/robots/pathfinder_robot_drone/urdf/drone.urdf && chown -R $$(stat -c %u:%g /workspace) src/robots/pathfinder_robot_drone/urdf'
 
 regenerate-car-description:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_robot_car/urdf/car.urdf.xacro -o src/pathfinder_robot_car/urdf/car.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_robot_car/urdf'
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/robots/pathfinder_robot_car/urdf/car.urdf.xacro -o src/robots/pathfinder_robot_car/urdf/car.urdf && chown -R $$(stat -c %u:%g /workspace) src/robots/pathfinder_robot_car/urdf'
 
 sh:
 	$(DEV_TTY) bash
