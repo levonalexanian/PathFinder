@@ -18,28 +18,29 @@ struct Box
   float r, g, b;
 };
 
-// Demo world geometry — MUST match generate_demo_map.cpp and the gazebo world SDFs.
-// Rendering primitives directly (instead of per-voxel cubes) avoids the z-fighting
-// stripes you get from 15k overlapping CUBE_LIST faces.
-constexpr float kObstacleR = 0.55f;
-constexpr float kObstacleG = 0.60f;
-constexpr float kObstacleB = 0.70f;
-constexpr float kGroundR = 0.30f;
-constexpr float kGroundG = 0.33f;
-constexpr float kGroundB = 0.40f;
+// Demo world geometry — primitive boxes for clean rendering (no z-fighting from
+// 15k overlapping voxel cubes). MUST match generate_demo_map.cpp and the gazebo
+// world SDFs *spatially*; visual thicknesses can differ slightly for aesthetics.
+// Color palette: muted distinct hues per obstacle type so they're identifiable
+// at a glance without being garish.
+constexpr float kGroundR = 0.28f, kGroundG = 0.32f, kGroundB = 0.40f;   // dark slate
+constexpr float kPostR   = 0.85f, kPostG   = 0.55f, kPostB   = 0.20f;   // warm amber
+constexpr float kOverR   = 0.20f, kOverG   = 0.62f, kOverB   = 0.70f;   // teal
+constexpr float kCeilR   = 0.58f, kCeilG   = 0.42f, kCeilB   = 0.75f;   // muted purple
 
 const std::vector<Box> kObstacles = {
-  // Ground (z=0..0.1 over the full 10x10 area)
-  {5.0, 5.0, 0.05, 10.0, 10.0, 0.1, kGroundR, kGroundG, kGroundB},
+  // Ground (rendered as a thin 5cm slab at z=0..0.05 so the car's wheels — which
+  // bottom out at z=0.05 — rest exactly on top instead of being buried inside).
+  {5.0, 5.0, 0.025, 10.0, 10.0, 0.05, kGroundR, kGroundG, kGroundB},
   // 3 posts (z=0.1..5.0, 0.5x0.5 cross-section)
-  {2.0, 2.0, 2.55, 0.5, 0.5, 4.9, kObstacleR, kObstacleG, kObstacleB},
-  {5.0, 7.0, 2.55, 0.5, 0.5, 4.9, kObstacleR, kObstacleG, kObstacleB},
-  {8.0, 3.0, 2.55, 0.5, 0.5, 4.9, kObstacleR, kObstacleG, kObstacleB},
+  {2.0, 2.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
+  {5.0, 7.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
+  {8.0, 3.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
   // 2 overhangs (z=2.0..2.5, 2x2 footprint)
-  {4.0, 5.0, 2.25, 2.0, 2.0, 0.5, kObstacleR, kObstacleG, kObstacleB},
-  {7.5, 2.0, 2.25, 2.0, 2.0, 0.5, kObstacleR, kObstacleG, kObstacleB},
+  {4.0, 5.0, 2.25, 2.0, 2.0, 0.5, kOverR, kOverG, kOverB},
+  {7.5, 2.0, 2.25, 2.0, 2.0, 0.5, kOverR, kOverG, kOverB},
   // Low ceiling (z=1.0..1.2, 2x2 footprint)
-  {1.5, 1.5, 1.1, 2.0, 2.0, 0.2, kObstacleR, kObstacleG, kObstacleB},
+  {1.5, 1.5, 1.1, 2.0, 2.0, 0.2, kCeilR, kCeilG, kCeilB},
 };
 
 }  // namespace
