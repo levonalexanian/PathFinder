@@ -1,0 +1,39 @@
+# AddressSanitizer / LeakSanitizer suppressions for PathFinder.
+#
+# Usage:
+#   ASAN_OPTIONS="verify_asan_link_order=0:suppressions=$(pwd)/sanitizers/asan.supp" \
+#       make launch-car HEADLESS=true
+#
+# Note: the most common noise from ASan in this project is NOT a suppressible
+# leak. It is a startup warning:
+#
+#   ==NNN==ASan runtime does not come first in initial library list; you should
+#   either link runtime to your application or manually preload it with LD_PRELOAD
+#
+# That message fires once when foxglove_bridge dlopen()s its connector plugins
+# from a non-ASan-instrumented .so. It is NOT controllable via this suppression
+# file — it is controlled by the env var verify_asan_link_order=0 (shown above).
+# The warning is benign: foxglove_bridge plugins do not allocate in ways ASan
+# cares about, and our ASan-instrumented code is still fully checked.
+#
+# ---------------------------------------------------------------------------
+# Leak suppressions (active only when ASAN_OPTIONS=detect_leaks=1).
+#
+# We default to detect_leaks=0 because Gazebo and rclcpp shutdown paths leak
+# small amounts on graceful exit; chasing them is not worth the time and they
+# don't grow over the lifetime of a run. If you do enable leak checking, the
+# patterns below filter the known-benign culprits so real leaks in our code
+# stand out.
+
+# Gazebo's gz-sim8 GUI singleton + Qt plugin caches leak on shutdown.
+leak:libgz-sim8
+
+# FastDDS holds internal singleton state for the lifetime of the process; the
+# leak shows up as a "definitely lost" block at exit.
+leak:libfastrtps
+leak:libfastcdr
+
+# rclcpp's logging subsystem registers handlers via static initialization that
+# isn't torn down on rclcpp::shutdown().
+leak:rclcpp::Logger
+leak:rcutils_logging
