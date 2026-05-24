@@ -29,10 +29,10 @@ constexpr float kOverR   = 0.20f, kOverG   = 0.62f, kOverB   = 0.70f;   // teal
 constexpr float kCeilR   = 0.58f, kCeilG   = 0.42f, kCeilB   = 0.75f;   // muted purple
 
 const std::vector<Box> kObstacles = {
-  // Ground (top at z=0.03, ~2cm below the car's wheel bottoms at z=0.05). The
-  // small gap prevents z-fighting between wheel and ground faces and gives the
-  // car a natural-looking ground clearance.
-  {5.0, 5.0, 0.015, 10.0, 10.0, 0.03, kGroundR, kGroundG, kGroundB},
+  // Ground (top at z=0, slab 5cm thick extending down to z=-0.05). The car
+  // spawns with wheel bottoms exactly at z=0 so the contact patch sits cleanly
+  // on the slab surface with no settling.
+  {5.0, 5.0, -0.025, 10.0, 10.0, 0.05, kGroundR, kGroundG, kGroundB},
   // 3 posts (rooted at z=0, extend to z=5.0). The octomap actually has them
   // start at z=0.1 (above the ground voxels), but rendering them from z=0
   // makes them look planted in the floor instead of floating above it.

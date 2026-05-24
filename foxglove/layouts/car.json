@@ -24,7 +24,7 @@
           "instanceId": "f2f2f2f2-2222-4222-8222-bbbbbbbbbbbb",
           "layerId": "foxglove.Urdf",
           "sourceType": "url",
-          "url": "https://raw.githubusercontent.com/levonalexanian/PathFinder/refs/heads/chore/cleanup/src/robots/pathfinder_robot_car/urdf/car.urdf?v=4w",
+          "url": "https://raw.githubusercontent.com/levonalexanian/PathFinder/refs/heads/chore/cleanup/src/robots/pathfinder_robot_car/urdf/car.urdf?v=4w-chassis75",
           "filePath": "",
           "parameter": "",
           "topic": "",

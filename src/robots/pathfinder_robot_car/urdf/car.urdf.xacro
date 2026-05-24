@@ -24,14 +24,14 @@
 
   <link name="base_link">
     <visual>
-      <origin xyz="0 0 0.10"/>
+      <origin xyz="0 0 0.075"/>
       <geometry>
         <box size="${base_size_x} ${base_size_y} ${base_size_z}"/>
       </geometry>
       <material name="car_dark_blue"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0.10"/>
+      <origin xyz="0 0 0.075"/>
       <geometry>
         <box size="${base_size_x} ${base_size_y} ${base_size_z}"/>
       </geometry>
