@@ -29,9 +29,10 @@ constexpr float kOverR   = 0.20f, kOverG   = 0.62f, kOverB   = 0.70f;   // teal
 constexpr float kCeilR   = 0.58f, kCeilG   = 0.42f, kCeilB   = 0.75f;   // muted purple
 
 const std::vector<Box> kObstacles = {
-  // Ground (rendered as a thin 5cm slab at z=0..0.05 so the car's wheels — which
-  // bottom out at z=0.05 — rest exactly on top instead of being buried inside).
-  {5.0, 5.0, 0.025, 10.0, 10.0, 0.05, kGroundR, kGroundG, kGroundB},
+  // Ground (top at z=0.03, ~2cm below the car's wheel bottoms at z=0.05). The
+  // small gap prevents z-fighting between wheel and ground faces and gives the
+  // car a natural-looking ground clearance.
+  {5.0, 5.0, 0.015, 10.0, 10.0, 0.03, kGroundR, kGroundG, kGroundB},
   // 3 posts (z=0.1..5.0, 0.5x0.5 cross-section)
   {2.0, 2.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
   {5.0, 7.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
