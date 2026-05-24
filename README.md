@@ -65,6 +65,29 @@ Dijkstra explores ~35× more nodes than A\* on the same path; D\* Lite returns n
 | `sh` | Shell in the dev container (for `ros2 launch …` of individual planners, etc.) |
 | `down`, `clean` | Stop containers / remove image |
 
+### Sanitizer builds
+
+`make build` accepts a `SANITIZER` variable that injects the appropriate `-fsanitize=...` flags into every package and switches to a `Debug` build for cleaner stack traces:
+
+```bash
+make build SANITIZER=asan          # AddressSanitizer
+make build SANITIZER=tsan          # ThreadSanitizer
+make build SANITIZER=ubsan         # UndefinedBehaviorSanitizer
+make build SANITIZER=asan+ubsan    # ASan + UBSan together
+make build SANITIZER=tsan+ubsan    # TSan + UBSan together
+```
+
+ASan and TSan are mutually exclusive — combining them is a configure-time fatal error. `MemorySanitizer` is **not** supported, since it would require rebuilding ROS 2, libstdc++, and every transitive library with MSan instrumentation.
+
+Useful runtime env vars (set before `make launch-*` or `ros2 run`):
+
+```bash
+export ASAN_OPTIONS=symbolize=1:print_stacktrace=1
+export TSAN_OPTIONS=second_deadlock_stack=1
+```
+
+LeakSanitizer is bundled into ASan and will likely report leaks coming from ROS 2 / Gazebo initialization that are not in your code. Silence them with `ASAN_OPTIONS=detect_leaks=0` once you've confirmed they aren't yours.
+
 ## Layout
 
 ```

@@ -3,10 +3,38 @@ DEV := $(COMPOSE) run --rm -T dev
 DEV_TTY := $(COMPOSE) run --rm --service-ports dev
 
 TOOLCHAIN := /workspace/build/conan_toolchain.cmake
+SANITIZERS_INCLUDE := /workspace/cmake/sanitizers.cmake
 
 # Override with HEADLESS=true to run Gazebo server-only (no GUI). Useful when
 # DISPLAY isn't set or the host doesn't have X11.
 HEADLESS ?= false
+
+# Sanitizer selection. Leave empty for a normal Release build. Accepted values:
+#   asan, tsan, ubsan, asan+ubsan, tsan+ubsan
+# When set, the build switches to Debug for better stack traces.
+SANITIZER ?=
+
+ifeq ($(SANITIZER),)
+  SAN_CMAKE_ARGS :=
+  BUILD_TYPE := Release
+else ifeq ($(SANITIZER),asan)
+  SAN_CMAKE_ARGS := -DENABLE_ASAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),tsan)
+  SAN_CMAKE_ARGS := -DENABLE_TSAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),ubsan)
+  SAN_CMAKE_ARGS := -DENABLE_UBSAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),asan+ubsan)
+  SAN_CMAKE_ARGS := -DENABLE_ASAN=ON -DENABLE_UBSAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),tsan+ubsan)
+  SAN_CMAKE_ARGS := -DENABLE_TSAN=ON -DENABLE_UBSAN=ON
+  BUILD_TYPE := Debug
+else
+  $(error Unknown SANITIZER='$(SANITIZER)'. Use one of: asan, tsan, ubsan, asan+ubsan, tsan+ubsan)
+endif
 
 .PHONY: help image-build install build test generate-map launch-car launch-drone sh down clean
 
@@ -22,6 +50,10 @@ help:
 	@echo "  sh             Open an interactive shell in the dev container"
 	@echo "  down           Stop and remove containers"
 	@echo "  clean          Stop containers and remove the local image"
+	@echo ""
+	@echo "  SANITIZER=<mode> on 'make build' enables a sanitizer (Debug build)."
+	@echo "    Modes: asan, tsan, ubsan, asan+ubsan, tsan+ubsan"
+	@echo "    Example: make build SANITIZER=asan"
 
 image-build:
 	$(COMPOSE) build dev
@@ -30,7 +62,7 @@ install:
 	$(DEV) conan install . --output-folder=build --build=missing -s build_type=Release
 
 build:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN)'
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DCMAKE_PROJECT_INCLUDE=$(SANITIZERS_INCLUDE) $(SAN_CMAKE_ARGS)'
 
 test:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon test && colcon test-result --verbose'
