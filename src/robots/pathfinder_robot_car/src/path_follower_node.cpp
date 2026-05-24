@@ -19,8 +19,8 @@ public:
   {
     declare_parameter<double>("k_linear", 1.0);
     declare_parameter<double>("k_angular", 2.0);
-    declare_parameter<double>("max_linear", 0.5);
-    declare_parameter<double>("max_angular", 1.5);
+    declare_parameter<double>("max_linear", 1.0);
+    declare_parameter<double>("max_angular", 2.0);
     declare_parameter<double>("waypoint_tolerance", 0.15);
     declare_parameter<double>("update_rate", 20.0);
     declare_parameter<std::string>("map_frame", "map");
@@ -78,8 +78,8 @@ protected:
 private:
   double k_linear_{1.0};
   double k_angular_{2.0};
-  double max_linear_{0.5};
-  double max_angular_{1.5};
+  double max_linear_{1.0};
+  double max_angular_{2.0};
 };
 
 }  // namespace pathfinder_robot_car
