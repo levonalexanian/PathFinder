@@ -24,7 +24,7 @@
           "instanceId": "f2f2f2f2-2222-4222-8222-bbbbbbbbbbbb",
           "layerId": "foxglove.Urdf",
           "sourceType": "url",
-          "url": "https://raw.githubusercontent.com/levonalexanian/PathFinder/refs/heads/chore/cleanup/src/robots/pathfinder_robot_car/urdf/car.urdf",
+          "url": "https://raw.githubusercontent.com/levonalexanian/PathFinder/refs/heads/chore/cleanup/src/robots/pathfinder_robot_car/urdf/car.urdf?v=4w",
           "filePath": "",
           "parameter": "",
           "topic": "",
@@ -55,9 +55,10 @@
       "transforms": {
         "frame:map": { "visible": false },
         "frame:base_link": { "visible": false },
-        "frame:caster_link": { "visible": false },
-        "frame:wheel_left": { "visible": false },
-        "frame:wheel_right": { "visible": false }
+        "frame:wheel_fl": { "visible": false },
+        "frame:wheel_fr": { "visible": false },
+        "frame:wheel_rl": { "visible": false },
+        "frame:wheel_rr": { "visible": false }
       },
       "topics": {
         "/voxel_map_markers": {
