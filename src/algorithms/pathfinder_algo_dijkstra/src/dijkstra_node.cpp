@@ -157,6 +157,7 @@ visualization_msgs::msg::Marker make_cube_marker(
       m.colors.push_back(c);
     }
   }
+  m.lifetime = rclcpp::Duration::from_seconds(2.0);
   return m;
 }
 
@@ -190,6 +191,7 @@ visualization_msgs::msg::Marker make_line_marker(
     pt.z = p.z;
     m.points.push_back(pt);
   }
+  m.lifetime = rclcpp::Duration::from_seconds(2.0);
   return m;
 }
 
@@ -275,10 +277,10 @@ protected:
       const double cube_scale = grid.resolution() * 0.9;
       markers.markers.push_back(make_cube_marker(
         explored_world, output_frame, stamp, "EXPLORED_SET", 0,
-        cube_scale, 0.5f, 0.5f, 0.5f, 0.4f, &start_world));
+        cube_scale, 0.5f, 0.5f, 0.5f, 0.2f, &start_world));
       markers.markers.push_back(make_cube_marker(
         frontier_world, output_frame, stamp, "CURRENT_FRONTIER", 1,
-        cube_scale, 1.0f, 1.0f, 0.0f, 0.7f, nullptr));
+        cube_scale, 1.0f, 1.0f, 0.0f, 0.35f, nullptr));
       if (params.publish_current_best && best_world.size() >= 2) {
         markers.markers.push_back(make_line_marker(
           best_world, output_frame, stamp, "CURRENT_BEST_PATH", 2,

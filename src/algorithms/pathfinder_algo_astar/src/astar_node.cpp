@@ -74,6 +74,7 @@ visualization_msgs::msg::Marker make_voxel_marker(
   m.color.g = g;
   m.color.b = b;
   m.color.a = a;
+  m.lifetime = rclcpp::Duration::from_seconds(2.0);
   return m;
 }
 
@@ -92,6 +93,7 @@ visualization_msgs::msg::Marker make_line_marker(
   m.color.g = g;
   m.color.b = b;
   m.color.a = a;
+  m.lifetime = rclcpp::Duration::from_seconds(2.0);
   return m;
 }
 
@@ -194,14 +196,14 @@ protected:
       const double cube_size = res * 0.6;
 
       auto open_marker = make_voxel_marker(
-        stamp, "OPEN_SET", 0, cube_size, 1.0f, 1.0f, 0.0f, 0.7f);
+        stamp, "OPEN_SET", 0, cube_size, 1.0f, 1.0f, 0.0f, 0.35f);
       open_marker.points.reserve(afb.sampled_open_flat.size());
       for (auto f : afb.sampled_open_flat) {
         open_marker.points.push_back(voxel_point(grid, f));
       }
 
       auto closed_marker = make_voxel_marker(
-        stamp, "CLOSED_SET", 1, cube_size, 0.5f, 0.5f, 0.5f, 0.4f);
+        stamp, "CLOSED_SET", 1, cube_size, 0.5f, 0.5f, 0.5f, 0.2f);
       closed_marker.points.reserve(afb.sampled_closed_flat.size());
       for (auto f : afb.sampled_closed_flat) {
         closed_marker.points.push_back(voxel_point(grid, f));

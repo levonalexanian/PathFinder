@@ -73,8 +73,9 @@ visualization_msgs::msg::MarkerArray build_markers(
   edges.color.r = 0.0f;
   edges.color.g = 1.0f;
   edges.color.b = 1.0f;
-  edges.color.a = 0.6f;
+  edges.color.a = 0.3f;
   edges.pose.orientation.w = 1.0;
+  edges.lifetime = rclcpp::Duration::from_seconds(2.0);
   edges.points.reserve(fb.tree_edges.size() * 2);
   for (const auto & e : fb.tree_edges) {
     geometry_msgs::msg::Point a, b;
@@ -104,6 +105,7 @@ visualization_msgs::msg::MarkerArray build_markers(
   best_nodes.color.b = 0.0f;
   best_nodes.color.a = 1.0f;
   best_nodes.pose.orientation.w = 1.0;
+  best_nodes.lifetime = rclcpp::Duration::from_seconds(2.0);
   best_nodes.points.reserve(fb.best_partial_path_world.size());
   for (const auto & p : fb.best_partial_path_world) {
     geometry_msgs::msg::Point gp;
