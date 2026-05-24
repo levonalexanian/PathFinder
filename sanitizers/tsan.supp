@@ -3,6 +3,15 @@
 # Usage:
 #   TSAN_OPTIONS="suppressions=$(pwd)/sanitizers/tsan.supp" make launch-car HEADLESS=true
 #
+# Tip — driving the demo with `ros2 topic pub` from a Python entrypoint while
+# the C++ nodes are TSan-instrumented requires preloading libtsan so dlopen()
+# can satisfy TLS for the message-type plugins:
+#
+#   LD_PRELOAD=/lib/x86_64-linux-gnu/libtsan.so.2 ros2 topic pub --once /goal_pose ...
+#
+# Without it you'll see "cannot allocate memory in static TLS block" and the
+# pub command will exit before publishing anything.
+#
 # Each entry below matches a race report that originates entirely inside a
 # third-party library, NOT in PathFinder source. They are kept as suppressions
 # rather than fixes because they are upstream bugs we cannot touch from this

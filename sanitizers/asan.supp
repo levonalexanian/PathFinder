@@ -1,20 +1,33 @@
-# AddressSanitizer / LeakSanitizer suppressions for PathFinder.
+# LeakSanitizer suppressions for PathFinder (used by ASan's bundled LSan).
 #
 # Usage:
-#   ASAN_OPTIONS="verify_asan_link_order=0:suppressions=$(pwd)/sanitizers/asan.supp" \
+#   ASAN_OPTIONS="verify_asan_link_order=0:detect_leaks=0" \
+#   LSAN_OPTIONS="suppressions=$(pwd)/sanitizers/asan.supp" \
 #       make launch-car HEADLESS=true
 #
-# Note: the most common noise from ASan in this project is NOT a suppressible
-# leak. It is a startup warning:
+# IMPORTANT: the entries below use LeakSanitizer's `leak:` syntax, which means
+# this file must be passed via LSAN_OPTIONS=suppressions=..., NOT
+# ASAN_OPTIONS=suppressions=.... Passing a leak-only file via ASAN_OPTIONS makes
+# ASan exit with "failed to parse suppressions" before your program runs.
+#
+# The two env-var settings ABOVE in tandem do two different things:
+#  - ASAN_OPTIONS=verify_asan_link_order=0   silences the foxglove_bridge dlopen
+#                                            startup warning (not a leak; can't
+#                                            be put in a suppression file)
+#  - ASAN_OPTIONS=detect_leaks=0             skips leak detection entirely; the
+#                                            LSan suppressions below are only
+#                                            consulted if you flip this to 1
+#  - LSAN_OPTIONS=suppressions=this-file     filters known-benign leaks (below)
+#
+# foxglove_bridge startup warning explained:
 #
 #   ==NNN==ASan runtime does not come first in initial library list; you should
 #   either link runtime to your application or manually preload it with LD_PRELOAD
 #
-# That message fires once when foxglove_bridge dlopen()s its connector plugins
-# from a non-ASan-instrumented .so. It is NOT controllable via this suppression
-# file — it is controlled by the env var verify_asan_link_order=0 (shown above).
-# The warning is benign: foxglove_bridge plugins do not allocate in ways ASan
-# cares about, and our ASan-instrumented code is still fully checked.
+# That fires once when foxglove_bridge dlopen()s its connector plugins from a
+# non-ASan-instrumented .so. It's benign: those plugins don't allocate in ways
+# ASan cares about, and our ASan-instrumented code is still fully checked. Set
+# verify_asan_link_order=0 to silence it.
 #
 # ---------------------------------------------------------------------------
 # Leak suppressions (active only when ASAN_OPTIONS=detect_leaks=1).
