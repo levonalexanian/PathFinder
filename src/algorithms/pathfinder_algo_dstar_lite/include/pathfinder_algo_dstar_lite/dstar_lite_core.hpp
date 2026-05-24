@@ -22,6 +22,7 @@ struct DstarLiteParams
   double max_plan_time_sec{5.0};
   int feedback_every_nodes{200};
   double feedback_every_seconds{0.2};
+  int viz_delay_ms{0};
 };
 
 struct DstarLiteFeedback

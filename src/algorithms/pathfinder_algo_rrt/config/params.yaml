@@ -9,5 +9,6 @@
     goal_tolerance: 0.3
     max_iterations: 5000
     min_iterations_after_goal: 1000
+    viz_delay_ms: 100
     random_seed: 0
     output_frame: "map"

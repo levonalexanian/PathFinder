@@ -225,6 +225,8 @@ protected:
       static_cast<int>(logger_node->get_parameter("feedback_node_stride").as_int());
     params.feedback_time_stride_sec =
       logger_node->get_parameter("feedback_time_stride_sec").as_double();
+    params.viz_delay_ms =
+      static_cast<int>(logger_node->get_parameter("viz_delay_ms").as_int());
     params.publish_current_best =
       logger_node->get_parameter("publish_current_best").as_bool();
 
@@ -322,6 +324,7 @@ public:
     declare_parameter<double>("max_plan_time_sec", 5.0);
     declare_parameter<int>("feedback_node_stride", 200);
     declare_parameter<double>("feedback_time_stride_sec", 0.2);
+    declare_parameter<int>("viz_delay_ms", 0);
     declare_parameter<bool>("publish_current_best", true);
   }
 

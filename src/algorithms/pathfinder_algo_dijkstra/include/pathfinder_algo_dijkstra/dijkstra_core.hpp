@@ -18,6 +18,7 @@ struct DijkstraParams
   double max_plan_time_sec{5.0};
   int feedback_node_stride{200};
   double feedback_time_stride_sec{0.2};
+  int viz_delay_ms{0};
   bool publish_current_best{true};
 };
 

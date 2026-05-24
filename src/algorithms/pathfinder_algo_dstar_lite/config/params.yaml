@@ -5,3 +5,4 @@
     max_plan_time_sec: 5.0
     feedback_every_nodes: 200
     feedback_every_seconds: 0.2
+    viz_delay_ms: 100

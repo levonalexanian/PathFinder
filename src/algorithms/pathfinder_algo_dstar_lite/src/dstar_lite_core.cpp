@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -252,6 +253,9 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
          since_fb_sec >= feedback_every_seconds))
     {
       emit_feedback(stats.expansions);
+      if (params.viz_delay_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+      }
       since_feedback = 0;
       last_feedback = now_wall;
     }

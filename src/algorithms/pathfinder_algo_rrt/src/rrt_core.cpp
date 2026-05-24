@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <limits>
 #include <random>
+#include <thread>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
@@ -395,6 +396,9 @@ RRTResult RRTCore::plan(
       std::chrono::duration<double>(now_t - last_feedback).count();
     if (feedback && ((iter % 100) == 0 || since_feedback >= 0.2)) {
       feedback(build_feedback(rrt, best_goal_idx, best_cost, grid));
+      if (params.viz_delay_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+      }
       last_feedback = now_t;
     }
   }

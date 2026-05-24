@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <queue>
+#include <thread>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
@@ -228,6 +229,9 @@ AstarResult AstarCore::plan(
         since_fb_sec >= feedback_every_seconds)
     {
       emit_feedback(true);
+      if (params.viz_delay_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+      }
       nodes_since_feedback = 0;
       last_feedback_time = now_wall;
     }

@@ -24,6 +24,7 @@ struct RRTParams
   double goal_tolerance{0.3};
   int max_iterations{5000};
   int min_iterations_after_goal{1000};
+  int viz_delay_ms{0};
   uint32_t random_seed{0};  // 0 means use a time-based seed
   std::string output_frame{"map"};
 };

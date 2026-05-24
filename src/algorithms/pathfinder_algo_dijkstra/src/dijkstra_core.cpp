@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <limits>
 #include <queue>
+#include <thread>
 #include <vector>
 
 #include <rclcpp/logging.hpp>
@@ -250,6 +251,9 @@ DijkstraResult DijkstraCore::plan(
       fb.sampled_closed_flat = sample_flat(closed, 500);
       fb.sampled_open_flat = sample_flat(in_open, 500);
       feedback(fb);
+      if (params.viz_delay_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+      }
     }
   }
 

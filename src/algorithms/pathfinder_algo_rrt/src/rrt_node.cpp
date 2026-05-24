@@ -136,6 +136,7 @@ public:
     node->declare_parameter<double>("max_plan_time_sec", 5.0);
     node->declare_parameter<double>("robot_radius", 0.25);
     node->declare_parameter<int>("min_iterations_after_goal", 1000);
+    node->declare_parameter<int>("viz_delay_ms", 0);
     node->declare_parameter<int>("random_seed", 0);
     node->declare_parameter<std::string>("output_frame", "map");
   }
@@ -166,6 +167,8 @@ protected:
     params.robot_radius = node()->get_parameter("robot_radius").as_double();
     params.min_iterations_after_goal =
       node()->get_parameter("min_iterations_after_goal").as_int();
+    params.viz_delay_ms =
+      static_cast<int>(node()->get_parameter("viz_delay_ms").as_int());
     const int seed_param = node()->get_parameter("random_seed").as_int();
     params.random_seed = (seed_param > 0) ? static_cast<uint32_t>(seed_param) : 0u;
     const std::string frame = node()->get_parameter("output_frame").as_string();

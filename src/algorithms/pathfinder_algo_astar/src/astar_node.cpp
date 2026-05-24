@@ -124,6 +124,7 @@ public:
     node->declare_parameter<double>("max_plan_time_sec", 5.0);
     node->declare_parameter<int>("feedback_every_nodes", 200);
     node->declare_parameter<double>("feedback_every_seconds", 0.2);
+    node->declare_parameter<int>("viz_delay_ms", 0);
   }
 
 protected:
@@ -140,6 +141,8 @@ protected:
       1, node()->get_parameter("feedback_every_nodes").as_int()));
     params.feedback_every_seconds =
       node()->get_parameter("feedback_every_seconds").as_double();
+    params.viz_delay_ms =
+      static_cast<int>(node()->get_parameter("viz_delay_ms").as_int());
 
     auto tree = octree_from_msg(latest_map);
     if (!tree) {
