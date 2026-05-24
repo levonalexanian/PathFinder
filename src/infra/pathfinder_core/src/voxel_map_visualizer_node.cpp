@@ -33,10 +33,12 @@ const std::vector<Box> kObstacles = {
   // small gap prevents z-fighting between wheel and ground faces and gives the
   // car a natural-looking ground clearance.
   {5.0, 5.0, 0.015, 10.0, 10.0, 0.03, kGroundR, kGroundG, kGroundB},
-  // 3 posts (z=0.1..5.0, 0.5x0.5 cross-section)
-  {2.0, 2.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
-  {5.0, 7.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
-  {8.0, 3.0, 2.55, 0.5, 0.5, 4.9, kPostR, kPostG, kPostB},
+  // 3 posts (rooted at z=0, extend to z=5.0). The octomap actually has them
+  // start at z=0.1 (above the ground voxels), but rendering them from z=0
+  // makes them look planted in the floor instead of floating above it.
+  {2.0, 2.0, 2.5, 0.5, 0.5, 5.0, kPostR, kPostG, kPostB},
+  {5.0, 7.0, 2.5, 0.5, 0.5, 5.0, kPostR, kPostG, kPostB},
+  {8.0, 3.0, 2.5, 0.5, 0.5, 5.0, kPostR, kPostG, kPostB},
   // 2 overhangs (z=2.0..2.5, 2x2 footprint)
   {4.0, 5.0, 2.25, 2.0, 2.0, 0.5, kOverR, kOverG, kOverB},
   {7.5, 2.0, 2.25, 2.0, 2.0, 0.5, kOverR, kOverG, kOverB},
