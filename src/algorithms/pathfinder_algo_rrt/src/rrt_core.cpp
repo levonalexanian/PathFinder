@@ -7,7 +7,6 @@
 #include <limits>
 #include <random>
 #include <thread>
-#include <unordered_set>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
@@ -241,46 +240,38 @@ std::vector<pathfinder_core::VoxelIndex> path_to_voxels(
   return out;
 }
 
-// Walk the tree and return up to `max_edges` newly-emitted edges (child node
-// indices not yet in `already_emitted`). Newly-returned child indices are
-// inserted into `already_emitted` so subsequent calls return only further
-// deltas — this drives the per-edge fade-out wavefront in the Node.
-struct NewEdges
+std::vector<std::pair<WorldPoint, WorldPoint>> sample_tree_edges(
+  const std::vector<TreeNode> & nodes)
 {
-  std::vector<std::pair<WorldPoint, WorldPoint>> edges;
-  std::vector<std::size_t> ids;
-};
+  std::vector<std::size_t> edge_indices;
+  edge_indices.reserve(nodes.size());
+  for (std::size_t i = 1; i < nodes.size(); ++i) {
+    if (nodes[i].parent_idx >= 0) {
+      edge_indices.push_back(i);
+    }
+  }
+  const std::size_t max_edges = kMaxTreeEdgePoints / 2;
+  if (edge_indices.size() > max_edges) {
+    std::mt19937 rng(42);
+    std::shuffle(edge_indices.begin(), edge_indices.end(), rng);
+    edge_indices.resize(max_edges);
+  }
 
-NewEdges sample_new_tree_edges(
-  const std::vector<TreeNode> & nodes,
-  std::unordered_set<std::size_t> & already_emitted,
-  std::size_t max_edges)
-{
-  NewEdges out;
-  out.edges.reserve(max_edges);
-  out.ids.reserve(max_edges);
-  for (std::size_t i = 1; i < nodes.size() && out.edges.size() < max_edges; ++i) {
-    if (nodes[i].parent_idx < 0) {
-      continue;
-    }
-    if (!already_emitted.insert(i).second) {
-      continue;
-    }
+  std::vector<std::pair<WorldPoint, WorldPoint>> edges;
+  edges.reserve(edge_indices.size());
+  for (auto i : edge_indices) {
     const auto & child = nodes[i];
     const auto & parent = nodes[child.parent_idx];
-    out.edges.emplace_back(
-      to_world_point(parent.position), to_world_point(child.position));
-    out.ids.push_back(i);
+    edges.emplace_back(to_world_point(parent.position), to_world_point(child.position));
   }
-  return out;
+  return edges;
 }
 
 RRTFeedback build_feedback(
   const RRTStar & rrt,
   int best_goal_idx,
   double best_cost,
-  const pathfinder_core::InflatedVoxelGrid & grid,
-  std::unordered_set<std::size_t> & emitted_edges)
+  const pathfinder_core::InflatedVoxelGrid & grid)
 {
   RRTFeedback fb;
   fb.nodes_explored = static_cast<int>(rrt.size());
@@ -294,10 +285,7 @@ RRTFeedback build_feedback(
     fb.best_partial_path = path_to_voxels(best_path, grid);
     fb.best_partial_path_world = path_to_world_points(best_path);
   }
-  const std::size_t max_new_edges = kMaxTreeEdgePoints / 2;
-  auto delta = sample_new_tree_edges(rrt.nodes(), emitted_edges, max_new_edges);
-  fb.tree_edges = std::move(delta.edges);
-  fb.tree_edge_ids = std::move(delta.ids);
+  fb.tree_edges = sample_tree_edges(rrt.nodes());
   return fb;
 }
 
@@ -317,11 +305,6 @@ RRTResult RRTCore::plan(
 {
   RRTResult result;
   const auto t_start = std::chrono::steady_clock::now();
-
-  // Fresh viz state per plan() so each run shows a new wavefront.
-  emitted_edges_.clear();
-  emitted_open_.clear();
-  emitted_closed_.clear();
 
   const auto start_world = grid.voxel_to_world(start);
   const auto goal_world = grid.voxel_to_world(goal);
@@ -412,7 +395,7 @@ RRTResult RRTCore::plan(
     const double since_feedback =
       std::chrono::duration<double>(now_t - last_feedback).count();
     if (feedback && ((iter % 100) == 0 || since_feedback >= 0.2)) {
-      feedback(build_feedback(rrt, best_goal_idx, best_cost, grid, emitted_edges_));
+      feedback(build_feedback(rrt, best_goal_idx, best_cost, grid));
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
       }
@@ -424,7 +407,7 @@ RRTResult RRTCore::plan(
   const double total_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
 
   if (feedback) {
-    feedback(build_feedback(rrt, best_goal_idx, best_cost, grid, emitted_edges_));
+    feedback(build_feedback(rrt, best_goal_idx, best_cost, grid));
   }
 
   result.plan_duration_ms = total_ms;

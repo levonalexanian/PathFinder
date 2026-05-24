@@ -94,18 +94,16 @@ void fill_marker_header(
   m.pose.orientation.w = 1.0;
 }
 
-visualization_msgs::msg::Marker make_single_cube(
+visualization_msgs::msg::Marker make_cube_marker(
   const rclcpp::Time & stamp,
   const std::string & ns,
   int id,
-  const geometry_msgs::msg::Point & center,
   double cube_size,
   float r, float g, float b, float a)
 {
   visualization_msgs::msg::Marker m;
   fill_marker_header(m, stamp, id, ns);
-  m.type = visualization_msgs::msg::Marker::CUBE;
-  m.pose.position = center;
+  m.type = visualization_msgs::msg::Marker::CUBE_LIST;
   m.scale.x = cube_size;
   m.scale.y = cube_size;
   m.scale.z = cube_size;
@@ -116,10 +114,6 @@ visualization_msgs::msg::Marker make_single_cube(
   m.lifetime = rclcpp::Duration::from_seconds(2.0);
   return m;
 }
-
-constexpr int kOpenIdBase = 0;
-constexpr int kClosedIdBase = 100'000'000;
-constexpr int kPathMarkerId = 200'000'000;
 
 visualization_msgs::msg::Marker make_line_marker(
   const rclcpp::Time & stamp,
@@ -258,23 +252,22 @@ protected:
       const auto stamp = node()->now();
       const double cube_size = res * 0.6;
 
-      ros_fb.search_state.markers.reserve(
-        fb.sampled_open_flat.size() + fb.sampled_closed_flat.size() + 1);
+      auto open_marker = make_cube_marker(
+        stamp, "OPEN_SET", 0, cube_size, 1.0f, 1.0f, 0.0f, 0.35f);
+      open_marker.points.reserve(fb.sampled_open_flat.size());
       for (auto f : fb.sampled_open_flat) {
-        const int id = kOpenIdBase + static_cast<int>(f % 100'000'000);
-        ros_fb.search_state.markers.push_back(make_single_cube(
-          stamp, "OPEN_SET", id, voxel_world_point(grid_ref, f),
-          cube_size, 1.0f, 1.0f, 0.0f, 0.35f));
+        open_marker.points.push_back(voxel_world_point(grid_ref, f));
       }
+
+      auto locked_marker = make_cube_marker(
+        stamp, "LOCKED_DOWN", 1, cube_size, 0.5f, 0.5f, 0.5f, 0.2f);
+      locked_marker.points.reserve(fb.sampled_closed_flat.size());
       for (auto f : fb.sampled_closed_flat) {
-        const int id = kClosedIdBase + static_cast<int>(f % 100'000'000);
-        ros_fb.search_state.markers.push_back(make_single_cube(
-          stamp, "LOCKED_DOWN", id, voxel_world_point(grid_ref, f),
-          cube_size, 0.5f, 0.5f, 0.5f, 0.2f));
+        locked_marker.points.push_back(voxel_world_point(grid_ref, f));
       }
 
       auto path_marker = make_line_marker(
-        stamp, "CURRENT_BEST_PATH", kPathMarkerId, res * 0.3, 0.0f, 1.0f, 0.0f, 0.9f);
+        stamp, "CURRENT_BEST_PATH", 2, res * 0.3, 0.0f, 1.0f, 0.0f, 0.9f);
       path_marker.points.reserve(fb.best_partial_path.size());
       for (const auto & v : fb.best_partial_path) {
         path_marker.points.push_back(voxel_world_point(grid_ref, v));
@@ -297,6 +290,8 @@ protected:
       ros_fb.current_best = cb;
       ros_fb.best_cost_so_far = fb.best_cost_so_far;
 
+      ros_fb.search_state.markers.push_back(open_marker);
+      ros_fb.search_state.markers.push_back(locked_marker);
       ros_fb.search_state.markers.push_back(path_marker);
 
       publish_feedback(ros_fb);

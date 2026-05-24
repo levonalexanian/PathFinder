@@ -54,8 +54,6 @@ void DstarLiteCore::reset()
   last_start_flat_.reset();
   last_goal_flat_.reset();
   initialized_ = false;
-  emitted_open_.clear();
-  emitted_closed_.clear();
 }
 
 double DstarLiteCore::heuristic(
@@ -308,7 +306,7 @@ std::vector<pathfinder_core::VoxelIndex> DstarLiteCore::extract_path(
   return out;
 }
 
-std::vector<std::size_t> DstarLiteCore::sample_open_flats(std::size_t max_count)
+std::vector<std::size_t> DstarLiteCore::sample_open_flats(std::size_t max_count) const
 {
   std::vector<std::size_t> out;
   if (max_count == 0) {
@@ -321,24 +319,34 @@ std::vector<std::size_t> DstarLiteCore::sample_open_flats(std::size_t max_count)
     if (!in_queue_[top.flat] || queue_key_[top.flat] != top.key) {
       continue;
     }
-    if (emitted_open_.insert(top.flat).second) {
-      out.push_back(top.flat);
-    }
+    out.push_back(top.flat);
   }
   return out;
 }
 
-std::vector<std::size_t> DstarLiteCore::sample_locked_flats(std::size_t max_count)
+std::vector<std::size_t> DstarLiteCore::sample_locked_flats(std::size_t max_count) const
 {
   std::vector<std::size_t> out;
   if (max_count == 0 || g_.empty()) {
     return out;
   }
+  std::size_t total = 0;
+  for (std::size_t i = 0; i < g_.size(); ++i) {
+    if (g_[i] != kInf && g_[i] == rhs_[i]) {
+      ++total;
+    }
+  }
+  if (total == 0) {
+    return out;
+  }
+  const std::size_t stride = std::max<std::size_t>(1, total / max_count);
+  std::size_t seen = 0;
   for (std::size_t i = 0; i < g_.size() && out.size() < max_count; ++i) {
     if (g_[i] != kInf && g_[i] == rhs_[i]) {
-      if (emitted_closed_.insert(i).second) {
+      if ((seen % stride) == 0) {
         out.push_back(i);
       }
+      ++seen;
     }
   }
   return out;
@@ -353,11 +361,6 @@ DstarLiteResult DstarLiteCore::plan(
 {
   DstarLiteResult result;
   const auto start_wall = std::chrono::steady_clock::now();
-
-  // Reset viz delta tracking for each plan call (including incremental
-  // replans) so users see a fresh wavefront animation every time.
-  emitted_open_.clear();
-  emitted_closed_.clear();
 
   if (grid.cell_count() == 0) {
     result.success = false;

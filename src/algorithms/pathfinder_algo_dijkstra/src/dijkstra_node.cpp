@@ -11,6 +11,7 @@
 #include <octomap/OcTree.h>
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
+#include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -82,40 +83,83 @@ std::vector<WorldPoint> voxels_to_world(
   return out;
 }
 
-visualization_msgs::msg::Marker make_single_cube(
-  const WorldPoint & center,
+std::vector<WorldPoint> flat_indices_to_world(
+  const pathfinder_core::InflatedVoxelGrid & grid,
+  const std::vector<std::size_t> & flat)
+{
+  std::vector<WorldPoint> out;
+  out.reserve(flat.size());
+  for (auto lin : flat) {
+    out.push_back(voxel_to_world_point(grid, grid.from_linear_index(lin)));
+  }
+  return out;
+}
+
+visualization_msgs::msg::Marker make_cube_marker(
+  const std::vector<WorldPoint> & pts,
   const std::string & frame_id,
   const rclcpp::Time & stamp,
   const std::string & ns,
   int id,
   double scale,
-  float r, float g, float b, float a)
+  float r, float g, float b, float a,
+  const WorldPoint * fade_origin = nullptr)
 {
   visualization_msgs::msg::Marker m;
   m.header.frame_id = frame_id;
   m.header.stamp = stamp;
   m.ns = ns;
   m.id = id;
-  m.type = visualization_msgs::msg::Marker::CUBE;
+  m.type = visualization_msgs::msg::Marker::CUBE_LIST;
   m.action = visualization_msgs::msg::Marker::ADD;
   m.scale.x = scale;
   m.scale.y = scale;
   m.scale.z = scale;
-  m.pose.position.x = center.x;
-  m.pose.position.y = center.y;
-  m.pose.position.z = center.z;
   m.pose.orientation.w = 1.0;
   m.color.r = r;
   m.color.g = g;
   m.color.b = b;
   m.color.a = a;
+  m.points.reserve(pts.size());
+  if (fade_origin) {
+    m.colors.reserve(pts.size());
+  }
+  double max_dist = 1.0;
+  if (fade_origin) {
+    for (const auto & p : pts) {
+      const double dx = p.x - fade_origin->x;
+      const double dy = p.y - fade_origin->y;
+      const double dz = p.z - fade_origin->z;
+      const double d = std::sqrt(dx * dx + dy * dy + dz * dz);
+      if (d > max_dist) {
+        max_dist = d;
+      }
+    }
+  }
+  for (const auto & p : pts) {
+    geometry_msgs::msg::Point pt;
+    pt.x = p.x;
+    pt.y = p.y;
+    pt.z = p.z;
+    m.points.push_back(pt);
+    if (fade_origin) {
+      const double dx = p.x - fade_origin->x;
+      const double dy = p.y - fade_origin->y;
+      const double dz = p.z - fade_origin->z;
+      const double d = std::sqrt(dx * dx + dy * dy + dz * dz);
+      const double t = std::min(1.0, d / max_dist);
+      std_msgs::msg::ColorRGBA c;
+      const float shade = static_cast<float>(0.75 - 0.55 * t);
+      c.r = shade;
+      c.g = shade;
+      c.b = shade;
+      c.a = a;
+      m.colors.push_back(c);
+    }
+  }
   m.lifetime = rclcpp::Duration::from_seconds(2.0);
   return m;
 }
-
-constexpr int kOpenIdBase = 0;
-constexpr int kClosedIdBase = 100'000'000;
-constexpr int kPathMarkerId = 200'000'000;
 
 visualization_msgs::msg::Marker make_line_marker(
   const std::vector<WorldPoint> & pts,
@@ -212,6 +256,11 @@ protected:
       goal.goal.pose.position.y,
       goal.goal.pose.position.z);
 
+    const WorldPoint start_world{
+      goal.start.pose.position.x,
+      goal.start.pose.position.y,
+      goal.start.pose.position.z};
+
     auto on_feedback = [&](const DijkstraFeedback & cb) {
       Feedback fb;
       fb.nodes_explored = cb.nodes_explored;
@@ -224,27 +273,19 @@ protected:
         fb.current_best.header.frame_id = output_frame;
         fb.current_best.header.stamp = stamp;
       }
+      const auto explored_world = flat_indices_to_world(grid, cb.sampled_closed_flat);
+      const auto frontier_world = flat_indices_to_world(grid, cb.sampled_open_flat);
       visualization_msgs::msg::MarkerArray markers;
       const double cube_scale = grid.resolution() * 0.9;
-      markers.markers.reserve(
-        cb.sampled_closed_flat.size() + cb.sampled_open_flat.size() + 1);
-      for (auto f : cb.sampled_closed_flat) {
-        const auto wp = voxel_to_world_point(grid, grid.from_linear_index(f));
-        const int id = kClosedIdBase + static_cast<int>(f % 100'000'000);
-        markers.markers.push_back(make_single_cube(
-          wp, output_frame, stamp, "EXPLORED_SET", id,
-          cube_scale, 0.5f, 0.5f, 0.5f, 0.2f));
-      }
-      for (auto f : cb.sampled_open_flat) {
-        const auto wp = voxel_to_world_point(grid, grid.from_linear_index(f));
-        const int id = kOpenIdBase + static_cast<int>(f % 100'000'000);
-        markers.markers.push_back(make_single_cube(
-          wp, output_frame, stamp, "CURRENT_FRONTIER", id,
-          cube_scale, 1.0f, 1.0f, 0.0f, 0.35f));
-      }
+      markers.markers.push_back(make_cube_marker(
+        explored_world, output_frame, stamp, "EXPLORED_SET", 0,
+        cube_scale, 0.5f, 0.5f, 0.5f, 0.2f, &start_world));
+      markers.markers.push_back(make_cube_marker(
+        frontier_world, output_frame, stamp, "CURRENT_FRONTIER", 1,
+        cube_scale, 1.0f, 1.0f, 0.0f, 0.35f, nullptr));
       if (params.publish_current_best && best_world.size() >= 2) {
         markers.markers.push_back(make_line_marker(
-          best_world, output_frame, stamp, "CURRENT_BEST_PATH", kPathMarkerId,
+          best_world, output_frame, stamp, "CURRENT_BEST_PATH", 2,
           0.05, 0.0f, 1.0f, 0.0f, 0.9f));
       }
       fb.search_state = markers;

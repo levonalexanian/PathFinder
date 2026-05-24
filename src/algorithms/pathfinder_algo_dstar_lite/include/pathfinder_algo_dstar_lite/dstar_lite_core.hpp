@@ -7,7 +7,6 @@
 #include <optional>
 #include <queue>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include <rclcpp/logger.hpp>
@@ -31,7 +30,6 @@ struct DstarLiteFeedback
   int nodes_explored{0};
   std::vector<pathfinder_core::VoxelIndex> best_partial_path;
   double best_cost_so_far{0.0};
-  // Newly-discovered cubes for visualization (deltas since last feedback).
   std::vector<std::size_t> sampled_open_flat;
   std::vector<std::size_t> sampled_closed_flat;
 };
@@ -136,13 +134,10 @@ private:
     const pathfinder_core::InflatedVoxelGrid & grid,
     std::size_t max_steps) const;
 
-  std::vector<std::size_t> sample_open_flats(std::size_t max_count);
-  std::vector<std::size_t> sample_locked_flats(std::size_t max_count);
+  std::vector<std::size_t> sample_open_flats(std::size_t max_count) const;
+  std::vector<std::size_t> sample_locked_flats(std::size_t max_count) const;
 
   rclcpp::Logger logger_;
-
-  std::unordered_set<std::size_t> emitted_open_;
-  std::unordered_set<std::size_t> emitted_closed_;
 
   // Persistent D* Lite state across plan() calls.
   std::vector<double> g_;

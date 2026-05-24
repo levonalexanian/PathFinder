@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <functional>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -49,12 +48,7 @@ struct RRTFeedback
   // separately so the Node can publish a high-fidelity nav_msgs::Path
   // without round-tripping through the voxel grid.
   std::vector<WorldPoint> best_partial_path_world;
-  // Newly-discovered tree edges since the last feedback (deltas).
   std::vector<std::pair<WorldPoint, WorldPoint>> tree_edges;
-  // Stable per-edge identity (child node index in the RRT tree); same length
-  // as tree_edges. Used by the Node to give each emitted edge a unique
-  // marker ID so each can fade independently.
-  std::vector<std::size_t> tree_edge_ids;
 };
 
 struct RRTResult
@@ -83,13 +77,6 @@ public:
 
 private:
   rclcpp::Logger logger_;
-  // For viz: tree-node indices already pushed to the Node as edges. Reset at
-  // the start of every plan() so each plan emits a fresh wavefront.
-  std::unordered_set<std::size_t> emitted_edges_;
-  // RRT has no closed-set analog, so this exists only for API parity with
-  // grid planners. Unused today.
-  std::unordered_set<std::size_t> emitted_open_;
-  std::unordered_set<std::size_t> emitted_closed_;
 };
 
 }  // namespace pathfinder_algo_rrt
