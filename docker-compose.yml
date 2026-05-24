@@ -2,7 +2,7 @@ services:
   dev:
     build:
       context: .
-      dockerfile: .devcontainer/Dockerfile
+      dockerfile: Dockerfile
     image: pathfinder-dev
     working_dir: /workspace
     volumes:

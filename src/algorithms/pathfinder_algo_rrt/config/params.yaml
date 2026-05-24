@@ -1,0 +1,14 @@
+/**:
+  ros__parameters:
+    use_sim_time: false
+    robot_radius: 0.35
+    max_plan_time_sec: 5.0
+    step_size: 0.3
+    goal_bias: 0.05
+    rewire_radius: 1.0
+    goal_tolerance: 0.3
+    max_iterations: 5000
+    min_iterations_after_goal: 1000
+    viz_delay_ms: 100
+    random_seed: 0
+    output_frame: "map"

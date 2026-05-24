@@ -1,0 +1,35 @@
+# ThreadSanitizer suppressions for PathFinder.
+#
+# Usage:
+#   TSAN_OPTIONS="suppressions=$(pwd)/sanitizers/tsan.supp" make launch-car HEADLESS=true
+#
+# Tip — driving the demo with `ros2 topic pub` from a Python entrypoint while
+# the C++ nodes are TSan-instrumented requires preloading libtsan so dlopen()
+# can satisfy TLS for the message-type plugins:
+#
+#   LD_PRELOAD=/lib/x86_64-linux-gnu/libtsan.so.2 ros2 topic pub --once /goal_pose ...
+#
+# Without it you'll see "cannot allocate memory in static TLS block" and the
+# pub command will exit before publishing anything.
+#
+# Each entry below matches a race report that originates entirely inside a
+# third-party library, NOT in PathFinder source. They are kept as suppressions
+# rather than fixes because they are upstream bugs we cannot touch from this
+# repo. Re-evaluate after any ROS 2 / FastDDS / DDS-vendor upgrade — if these
+# fire on patterns that LOOK like the existing ones but with new symbols,
+# investigate before adding a new entry: a real race in our code might be
+# masquerading as familiar noise.
+
+# ---------------------------------------------------------------------------
+# FastDDS shared-memory transport: receive-payload-pool race.
+#
+# When the SHM transport delivers a message to a subscribing rclcpp::Node,
+# FastDDS's eprosima::fastrtps::rtps::TopicPayloadPool::get_payload is called
+# on one DDS thread while eprosima::fastcdr::Cdr::deserialize_array runs on
+# another. TSan sees concurrent access on the payload buffer. This is internal
+# FastDDS state — our nodes only see fully-deserialized messages by the time
+# the subscription callback fires. Reported many times upstream against
+# eprosima/Fast-DDS; fixed in newer FastDDS releases but ROS 2 Jazzy still
+# ships a version where this trips.
+race:eprosima::fastrtps::rtps::TopicPayloadPool::get_payload
+race:eprosima::fastcdr::Cdr::deserialize_array

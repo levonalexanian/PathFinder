@@ -3,34 +3,57 @@ DEV := $(COMPOSE) run --rm -T dev
 DEV_TTY := $(COMPOSE) run --rm --service-ports dev
 
 TOOLCHAIN := /workspace/build/conan_toolchain.cmake
+SANITIZERS_INCLUDE := /workspace/cmake/sanitizers.cmake
 
-.PHONY: help image-build install build test launch launch-drone launch-drone-headless launch-headless launch-car launch-car-headless launch-base launch-astar launch-dijkstra launch-rrt launch-algos launch-demo-drone launch-demo-car generate-map regenerate-drone-description regenerate-car-description sh down clean
+# Override with HEADLESS=true to run Gazebo server-only (no GUI). Useful when
+# DISPLAY isn't set or the host doesn't have X11.
+HEADLESS ?= false
+
+# Sanitizer selection. Leave empty for a normal Release build. Accepted values:
+#   asan, tsan, ubsan, asan+ubsan, tsan+ubsan
+# When set, the build switches to Debug for better stack traces.
+SANITIZER ?=
+
+ifeq ($(SANITIZER),)
+  SAN_CMAKE_ARGS :=
+  BUILD_TYPE := Release
+else ifeq ($(SANITIZER),asan)
+  SAN_CMAKE_ARGS := -DENABLE_ASAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),tsan)
+  SAN_CMAKE_ARGS := -DENABLE_TSAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),ubsan)
+  SAN_CMAKE_ARGS := -DENABLE_UBSAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),asan+ubsan)
+  SAN_CMAKE_ARGS := -DENABLE_ASAN=ON -DENABLE_UBSAN=ON
+  BUILD_TYPE := Debug
+else ifeq ($(SANITIZER),tsan+ubsan)
+  SAN_CMAKE_ARGS := -DENABLE_TSAN=ON -DENABLE_UBSAN=ON
+  BUILD_TYPE := Debug
+else
+  $(error Unknown SANITIZER='$(SANITIZER)'. Use one of: asan, tsan, ubsan, asan+ubsan, tsan+ubsan)
+endif
+
+.PHONY: help image-build install build test generate-map launch-car launch-drone sh down clean
 
 help:
 	@echo "PathFinder make targets:"
-	@echo "  image-build                  Build the dev container image"
-	@echo "  install                      Run conan install inside the container"
-	@echo "  build                        colcon build inside the container"
-	@echo "  test                         colcon test inside the container"
-	@echo "  generate-map                 Generate maps/demo_world.bt via pathfinder_core"
-	@echo "  regenerate-drone-description Regenerate drone.urdf from drone.urdf.xacro"
-	@echo "  regenerate-car-description   Regenerate car.urdf from car.urdf.xacro"
-	@echo "  launch                       Alias for launch-drone (default robot)"
-	@echo "  launch-drone                 Launch the full drone bringup (Gazebo + planner)"
-	@echo "  launch-drone-headless        Same as launch-drone but server-only with headless rendering"
-	@echo "  launch-headless              Alias for launch-drone-headless"
-	@echo "  launch-car                   Launch the full car bringup (Gazebo + planner)"
-	@echo "  launch-car-headless          Same as launch-car but server-only with headless rendering"
-	@echo "  launch-base                  Launch just the base bringup (no Gazebo) for diagnostics"
-	@echo "  launch-astar                 Launch the A* action server only"
-	@echo "  launch-dijkstra              Launch the Dijkstra action server only"
-	@echo "  launch-rrt                   Launch the RRT* action server only"
-	@echo "  launch-algos                 Launch all three planner action servers together"
-	@echo "  launch-demo-drone            Drone bringup + all three planner servers"
-	@echo "  launch-demo-car              Car bringup + all three planner servers"
-	@echo "  sh                           Open an interactive shell in the dev container"
-	@echo "  down                         Stop and remove containers"
-	@echo "  clean                        Stop containers and remove the local image"
+	@echo "  image-build    Build the dev container image"
+	@echo "  install        Run conan install inside the container"
+	@echo "  build          colcon build inside the container"
+	@echo "  test           colcon test inside the container"
+	@echo "  generate-map   Generate maps/demo_world.bt"
+	@echo "  launch-car     Full demo: car + sim + all four planners"
+	@echo "  launch-drone   Full demo: drone + sim + all four planners"
+	@echo "  sh             Open an interactive shell in the dev container"
+	@echo "  down           Stop and remove containers"
+	@echo "  clean          Stop containers and remove the local image"
+	@echo ""
+	@echo "  SANITIZER=<mode> on 'make build' enables a sanitizer (Debug build)."
+	@echo "    Modes: asan, tsan, ubsan, asan+ubsan, tsan+ubsan"
+	@echo "    Example: make build SANITIZER=asan"
 
 image-build:
 	$(COMPOSE) build dev
@@ -39,56 +62,19 @@ install:
 	$(DEV) conan install . --output-folder=build --build=missing -s build_type=Release
 
 build:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN)'
+	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DCMAKE_PROJECT_INCLUDE=$(SANITIZERS_INCLUDE) $(SAN_CMAKE_ARGS)'
 
 test:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon test && colcon test-result --verbose'
 
-launch: launch-drone
-
-launch-drone:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_drone drone.launch.py'
-
-launch-drone-headless:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_drone drone.launch.py headless:=true'
-
-launch-headless: launch-drone-headless
-
-launch-car:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_car car.launch.py'
-
-launch-car-headless:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_car car.launch.py headless:=true'
-
-launch-base:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup base.launch.py'
-
-launch-astar:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_astar astar.launch.py'
-
-launch-dijkstra:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_dijkstra dijkstra.launch.py'
-
-launch-rrt:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_rrt rrt.launch.py'
-
-launch-algos:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup algos.launch.py'
-
-launch-demo-drone:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_drone.launch.py'
-
-launch-demo-car:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_car.launch.py'
-
 generate-map:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && mkdir -p maps && ros2 run pathfinder_core generate_demo_map maps/demo_world.bt'
 
-regenerate-drone-description:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_drone/urdf/drone.urdf.xacro -o src/pathfinder_drone/urdf/drone.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_drone/urdf'
+launch-car:
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_car.launch.py headless:=$(HEADLESS)'
 
-regenerate-car-description:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && xacro src/pathfinder_car/urdf/car.urdf.xacro -o src/pathfinder_car/urdf/car.urdf && chown -R $$(stat -c %u:%g /workspace) src/pathfinder_car/urdf'
+launch-drone:
+	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_drone.launch.py headless:=$(HEADLESS)'
 
 sh:
 	$(DEV_TTY) bash
