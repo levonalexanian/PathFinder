@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <rclcpp/logger.hpp>
@@ -26,6 +27,7 @@ struct AstarFeedback
   int nodes_explored{0};
   std::vector<pathfinder_core::VoxelIndex> best_partial_path;
   double best_cost_so_far{0.0};
+  // Newly-discovered cubes for visualization (deltas since last feedback).
   std::vector<std::size_t> sampled_open_flat;
   std::vector<std::size_t> sampled_closed_flat;
 };
@@ -55,6 +57,8 @@ public:
 
 private:
   rclcpp::Logger logger_;
+  std::unordered_set<std::size_t> emitted_open_;
+  std::unordered_set<std::size_t> emitted_closed_;
 };
 
 }  // namespace pathfinder_algo_astar

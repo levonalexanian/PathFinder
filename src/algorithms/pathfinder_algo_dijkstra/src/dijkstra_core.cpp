@@ -9,6 +9,7 @@
 #include <limits>
 #include <queue>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include <rclcpp/logging.hpp>
@@ -35,33 +36,28 @@ constexpr std::array<std::array<int, 3>, 26> kNeighborOffsets = []() {
   return out;
 }();
 
-std::vector<std::size_t> sample_flat(
+// Walk the flag vector and return up to `max_count` indices that are set in
+// `flags` but not yet in `already_emitted`. Inserts newly-returned indices
+// into `already_emitted` so subsequent calls return only further deltas.
+std::vector<std::size_t> sample_flat_delta(
   const std::vector<std::uint8_t> & flags,
+  std::unordered_set<std::size_t> & already_emitted,
   std::size_t max_count)
 {
   std::vector<std::size_t> out;
-  std::size_t count = 0;
-  for (auto f : flags) {
-    if (f) {
-      ++count;
-    }
-  }
-  if (count == 0) {
+  if (max_count == 0) {
     return out;
   }
-  const std::size_t stride = std::max<std::size_t>(1, count / max_count);
-  out.reserve(std::min(count, max_count));
-  std::size_t seen = 0;
+  out.reserve(max_count);
   for (std::size_t i = 0; i < flags.size(); ++i) {
     if (!flags[i]) {
       continue;
     }
-    if ((seen++ % stride) != 0) {
-      continue;
-    }
-    out.push_back(i);
-    if (out.size() >= max_count) {
-      break;
+    if (already_emitted.insert(i).second) {
+      out.push_back(i);
+      if (out.size() >= max_count) {
+        break;
+      }
     }
   }
   return out;
@@ -104,6 +100,9 @@ DijkstraResult DijkstraCore::plan(
   FeedbackCallback feedback)
 {
   const auto clock_start = std::chrono::steady_clock::now();
+
+  emitted_open_.clear();
+  emitted_closed_.clear();
 
   DijkstraResult out{};
   out.success = false;
@@ -248,8 +247,8 @@ DijkstraResult DijkstraCore::plan(
       fb.nodes_explored = expanded;
       fb.best_cost_so_far = top.cost;
       fb.best_partial_path = reconstruct_path(grid, parent, top.idx);
-      fb.sampled_closed_flat = sample_flat(closed, 500);
-      fb.sampled_open_flat = sample_flat(in_open, 500);
+      fb.sampled_closed_flat = sample_flat_delta(closed, emitted_closed_, 500);
+      fb.sampled_open_flat = sample_flat_delta(in_open, emitted_open_, 500);
       feedback(fb);
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));

@@ -100,6 +100,9 @@ AstarResult AstarCore::plan(
   AstarResult result;
   const auto start_wall = std::chrono::steady_clock::now();
 
+  emitted_open_.clear();
+  emitted_closed_.clear();
+
   const double res = grid.resolution();
   const int feedback_every_nodes = std::max(1, params.feedback_every_nodes);
   const double feedback_every_seconds = params.feedback_every_seconds;
@@ -132,33 +135,33 @@ AstarResult AstarCore::plan(
     AstarFeedback fb;
     fb.nodes_explored = nodes_expanded;
 
+    // Open delta: walk the queue (cheap) and emit any flat indices we haven't
+    // emitted yet. Bounded by kMaxSampledVoxels per frame.
     {
       OpenQueue copy = open;
       while (!copy.empty() && fb.sampled_open_flat.size() < kMaxSampledVoxels) {
-        fb.sampled_open_flat.push_back(copy.top().flat);
+        const std::size_t f = copy.top().flat;
         copy.pop();
+        if (emitted_open_.insert(f).second) {
+          fb.sampled_open_flat.push_back(f);
+        }
       }
     }
 
-    const std::size_t closed_total = buf.closed.size();
-    std::size_t closed_count = 0;
-    for (std::size_t i = 0; i < closed_total; ++i) {
-      if (buf.closed[i]) {
-        ++closed_count;
-      }
-    }
-    const std::size_t stride = std::max<std::size_t>(
-      1, closed_count / kMaxSampledVoxels);
-    std::size_t seen = 0;
-    for (std::size_t i = 0;
-         i < closed_total && fb.sampled_closed_flat.size() < kMaxSampledVoxels;
-         ++i)
+    // Closed delta: scan the closed buffer; collect indices we haven't emitted
+    // yet, capped at kMaxSampledVoxels per frame.
     {
-      if (buf.closed[i]) {
-        if (seen % stride == 0) {
+      const std::size_t closed_total = buf.closed.size();
+      for (std::size_t i = 0;
+           i < closed_total && fb.sampled_closed_flat.size() < kMaxSampledVoxels;
+           ++i)
+      {
+        if (!buf.closed[i]) {
+          continue;
+        }
+        if (emitted_closed_.insert(i).second) {
           fb.sampled_closed_flat.push_back(i);
         }
-        ++seen;
       }
     }
 

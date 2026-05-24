@@ -55,46 +55,62 @@ nav_msgs::msg::Path make_path(
   return path;
 }
 
+constexpr int kEdgeIdBase = 0;
+constexpr int kBestPathSpheresId = 200'000'000;
+
+visualization_msgs::msg::Marker make_single_edge(
+  const WorldPoint & a, const WorldPoint & b,
+  const std::string & frame,
+  const rclcpp::Time & stamp,
+  int id)
+{
+  visualization_msgs::msg::Marker m;
+  m.header.frame_id = frame;
+  m.header.stamp = stamp;
+  m.ns = "rrt_tree_edges";
+  m.id = id;
+  m.type = visualization_msgs::msg::Marker::LINE_LIST;
+  m.action = visualization_msgs::msg::Marker::ADD;
+  m.scale.x = 0.02;
+  m.color.r = 0.0f;
+  m.color.g = 1.0f;
+  m.color.b = 1.0f;
+  m.color.a = 0.3f;
+  m.pose.orientation.w = 1.0;
+  m.lifetime = rclcpp::Duration::from_seconds(2.0);
+  geometry_msgs::msg::Point pa, pb;
+  pa.x = a.x;
+  pa.y = a.y;
+  pa.z = a.z;
+  pb.x = b.x;
+  pb.y = b.y;
+  pb.z = b.z;
+  m.points.push_back(pa);
+  m.points.push_back(pb);
+  return m;
+}
+
 visualization_msgs::msg::MarkerArray build_markers(
   const RRTFeedback & fb,
   const std::string & frame,
   const rclcpp::Time & stamp)
 {
   visualization_msgs::msg::MarkerArray arr;
+  arr.markers.reserve(fb.tree_edges.size() + 1);
 
-  visualization_msgs::msg::Marker edges;
-  edges.header.frame_id = frame;
-  edges.header.stamp = stamp;
-  edges.ns = "rrt_tree_edges";
-  edges.id = 0;
-  edges.type = visualization_msgs::msg::Marker::LINE_LIST;
-  edges.action = visualization_msgs::msg::Marker::ADD;
-  edges.scale.x = 0.02;
-  edges.color.r = 0.0f;
-  edges.color.g = 1.0f;
-  edges.color.b = 1.0f;
-  edges.color.a = 0.3f;
-  edges.pose.orientation.w = 1.0;
-  edges.lifetime = rclcpp::Duration::from_seconds(2.0);
-  edges.points.reserve(fb.tree_edges.size() * 2);
-  for (const auto & e : fb.tree_edges) {
-    geometry_msgs::msg::Point a, b;
-    a.x = e.first.x;
-    a.y = e.first.y;
-    a.z = e.first.z;
-    b.x = e.second.x;
-    b.y = e.second.y;
-    b.z = e.second.z;
-    edges.points.push_back(a);
-    edges.points.push_back(b);
+  for (std::size_t i = 0; i < fb.tree_edges.size(); ++i) {
+    const auto & e = fb.tree_edges[i];
+    const std::size_t edge_id = (i < fb.tree_edge_ids.size())
+      ? fb.tree_edge_ids[i] : i;
+    const int marker_id = kEdgeIdBase + static_cast<int>(edge_id % 100'000'000);
+    arr.markers.push_back(make_single_edge(e.first, e.second, frame, stamp, marker_id));
   }
-  arr.markers.push_back(edges);
 
   visualization_msgs::msg::Marker best_nodes;
   best_nodes.header.frame_id = frame;
   best_nodes.header.stamp = stamp;
   best_nodes.ns = "rrt_best_path_nodes";
-  best_nodes.id = 1;
+  best_nodes.id = kBestPathSpheresId;
   best_nodes.type = visualization_msgs::msg::Marker::SPHERE_LIST;
   best_nodes.action = visualization_msgs::msg::Marker::ADD;
   best_nodes.scale.x = 0.08;
