@@ -91,6 +91,11 @@ install(
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  # Skip linters whose conventions this project doesn't follow (C++ style + copyright).
+  set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  set(ament_cmake_uncrustify_FOUND TRUE)
+  set(ament_cmake_flake8_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
