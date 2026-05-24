@@ -111,7 +111,7 @@ visualization_msgs::msg::Marker make_cube_marker(
   m.color.g = g;
   m.color.b = b;
   m.color.a = a;
-  m.lifetime = rclcpp::Duration::from_seconds(2.0);
+  m.lifetime = rclcpp::Duration::from_seconds(3.0);
   return m;
 }
 
@@ -130,7 +130,7 @@ visualization_msgs::msg::Marker make_line_marker(
   m.color.g = g;
   m.color.b = b;
   m.color.a = a;
-  m.lifetime = rclcpp::Duration::from_seconds(2.0);
+  m.lifetime = rclcpp::Duration::from_seconds(3.0);
   return m;
 }
 

@@ -157,7 +157,7 @@ visualization_msgs::msg::Marker make_cube_marker(
       m.colors.push_back(c);
     }
   }
-  m.lifetime = rclcpp::Duration::from_seconds(2.0);
+  m.lifetime = rclcpp::Duration::from_seconds(3.0);
   return m;
 }
 
@@ -191,7 +191,7 @@ visualization_msgs::msg::Marker make_line_marker(
     pt.z = p.z;
     m.points.push_back(pt);
   }
-  m.lifetime = rclcpp::Duration::from_seconds(2.0);
+  m.lifetime = rclcpp::Duration::from_seconds(3.0);
   return m;
 }
 

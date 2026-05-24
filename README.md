@@ -55,6 +55,16 @@ ros2 topic pub --once /algorithm_selection pathfinder_msgs/AlgorithmSelection \
 
 Dijkstra explores ~35× more nodes than A\* on the same path; D\* Lite returns near-instantly on its second call (incremental replan).
 
+### Watching the search
+
+While the planner runs, it publishes a `MarkerArray` on `/search_visualization` that lets you watch the algorithm think. The cubes have a 3-second lifetime, so they fade out a few seconds after planning ends.
+
+- **Yellow cubes** — the *open set*: voxels the algorithm is considering but hasn't expanded yet (the "frontier"). For A\* / Dijkstra / D\* Lite. For RRT\*, these are the latest tree-edge segments.
+- **Grey cubes** — the *closed set* (or "locked" for D\* Lite): voxels the algorithm has already expanded and won't revisit. Watch how Dijkstra's grey region spreads symmetrically outward while A\* leans toward the goal — that's the heuristic at work.
+- **Green line** — the current best path (`CURRENT_BEST_PATH`): refreshed each feedback frame, replaced when a better path is found.
+
+The number of cubes is capped (~500 per type per frame) so Foxglove stays responsive; the visualization is indicative, not exhaustive.
+
 ## Make targets
 
 | Target | What |
