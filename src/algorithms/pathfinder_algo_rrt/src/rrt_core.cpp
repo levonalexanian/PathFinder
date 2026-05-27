@@ -199,7 +199,8 @@ private:
       int p = tree_nodes_[i].parent_idx;
       while (p >= 0) {
         if (p == root_idx) {
-          tree_nodes_[i].cost -= delta;
+          // delta is negative on a cost decrease; add it so descendants drop too
+          tree_nodes_[i].cost += delta;
           break;
         }
         p = tree_nodes_[p].parent_idx;
