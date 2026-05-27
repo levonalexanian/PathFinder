@@ -28,14 +28,10 @@ add_library(dstar_lite_core
 target_include_directories(dstar_lite_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${OCTOMAP_INCLUDE_DIRS}
 )
 ament_target_dependencies(dstar_lite_core
-  rclcpp
   pathfinder_core
 )
-target_link_libraries(dstar_lite_core ${OCTOMAP_LIBRARIES})
-target_link_directories(dstar_lite_core PUBLIC ${OCTOMAP_LIBRARY_DIRS})
 
 add_executable(dstar_lite_node
   src/dstar_lite_node.cpp

@@ -28,6 +28,8 @@ def generate_launch_description():
     headless = LaunchConfiguration("headless")
     default_algorithm = LaunchConfiguration("default_algorithm")
     launch_foxglove = LaunchConfiguration("launch_foxglove")
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    map_file = LaunchConfiguration("map_file")
 
     declare_headless = DeclareLaunchArgument(
         "headless", default_value="false",
@@ -41,6 +43,15 @@ def generate_launch_description():
         "launch_foxglove", default_value="true",
         description="Launch the foxglove_bridge node",
     )
+    declare_use_sim_time = DeclareLaunchArgument(
+        "use_sim_time", default_value="true",
+        description="Use simulation (Gazebo) clock if true",
+    )
+    declare_map_file = DeclareLaunchArgument(
+        "map_file",
+        default_value=os.path.join(os.getcwd(), "maps", "demo_world.bt"),
+        description="Path to the .bt octomap file to publish",
+    )
 
     gz_args = PythonExpression([
         "'", world_path, " -r'",
@@ -52,9 +63,10 @@ def generate_launch_description():
             os.path.join(bringup_share, "launch", "base.launch.py")
         ),
         launch_arguments={
-            "use_sim_time": "true",
+            "use_sim_time": use_sim_time,
             "default_algorithm": default_algorithm,
             "launch_foxglove": launch_foxglove,
+            "map_file": map_file,
         }.items(),
     )
 
@@ -86,7 +98,7 @@ def generate_launch_description():
         arguments=[
             "-file", drone_sdf_path,
             "-name", "pathfinder_drone",
-            "-x", "0", "-y", "0", "-z", "0.5",
+            "-x", "4", "-y", "5", "-z", "2.55",
         ],
     )
 
@@ -133,6 +145,8 @@ def generate_launch_description():
         declare_headless,
         declare_default_algorithm,
         declare_launch_foxglove,
+        declare_use_sim_time,
+        declare_map_file,
         set_resource_path,
         base_launch,
         gz_sim,

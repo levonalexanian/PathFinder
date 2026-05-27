@@ -14,6 +14,21 @@
 namespace pathfinder_core
 {
 
+InflatedVoxelGrid::InflatedVoxelGrid(
+  std::array<int, 3> dims,
+  std::array<double, 3> min_bound,
+  double resolution,
+  std::vector<std::uint8_t> occupied)
+: occupied_(std::move(occupied)),
+  dims_(dims),
+  min_(min_bound),
+  resolution_(resolution)
+{
+  max_[0] = min_[0] + dims_[0] * resolution_;
+  max_[1] = min_[1] + dims_[1] * resolution_;
+  max_[2] = min_[2] + dims_[2] * resolution_;
+}
+
 InflatedVoxelGrid::InflatedVoxelGrid(const octomap::OcTree & tree, double robot_radius)
 {
   resolution_ = tree.getResolution();
@@ -117,17 +132,10 @@ std::vector<VoxelIndex> InflatedVoxelGrid::neighbors_26(const VoxelIndex & idx) 
 {
   std::vector<VoxelIndex> out;
   out.reserve(26);
-  for (int dz = -1; dz <= 1; ++dz) {
-    for (int dy = -1; dy <= 1; ++dy) {
-      for (int dx = -1; dx <= 1; ++dx) {
-        if (dx == 0 && dy == 0 && dz == 0) {
-          continue;
-        }
-        VoxelIndex nb{idx.x + dx, idx.y + dy, idx.z + dz};
-        if (in_bounds(nb)) {
-          out.push_back(nb);
-        }
-      }
+  for (const auto & d : kNeighborOffsets26) {
+    VoxelIndex nb{idx.x + d[0], idx.y + d[1], idx.z + d[2]};
+    if (in_bounds(nb)) {
+      out.push_back(nb);
     }
   }
   return out;

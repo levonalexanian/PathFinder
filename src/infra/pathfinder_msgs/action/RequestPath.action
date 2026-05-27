@@ -6,7 +6,7 @@ bool success
 string message
 float64 plan_duration_ms
 ---
-int32 nodes_explored
+int32 nodes_expanded
 float64 best_cost_so_far
 nav_msgs/Path current_best
 visualization_msgs/MarkerArray search_state

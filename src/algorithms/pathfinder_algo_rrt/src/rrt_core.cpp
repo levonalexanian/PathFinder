@@ -9,8 +9,6 @@
 #include <thread>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
-
 namespace pathfinder_algo_rrt
 {
 
@@ -56,6 +54,12 @@ public:
   void add_node(const Point3 & p, int parent_idx, double cost)
   {
     tree_nodes_.push_back({p, parent_idx, cost});
+  }
+
+  void update_node(int idx, int parent_idx, double cost)
+  {
+    tree_nodes_[idx].parent_idx = parent_idx;
+    tree_nodes_[idx].cost = cost;
   }
 
   const std::vector<TreeNode> & nodes() const { return tree_nodes_; }
@@ -195,7 +199,8 @@ private:
       int p = tree_nodes_[i].parent_idx;
       while (p >= 0) {
         if (p == root_idx) {
-          tree_nodes_[i].cost -= delta;
+          // delta is negative on a cost decrease; add it so descendants drop too
+          tree_nodes_[i].cost += delta;
           break;
         }
         p = tree_nodes_[p].parent_idx;
@@ -274,7 +279,7 @@ RRTFeedback build_feedback(
   const pathfinder_core::InflatedVoxelGrid & grid)
 {
   RRTFeedback fb;
-  fb.nodes_explored = static_cast<int>(rrt.size());
+  fb.nodes_expanded = static_cast<int>(rrt.size());
   fb.best_cost_so_far = std::isfinite(best_cost)
     ? best_cost
     : std::numeric_limits<double>::infinity();
@@ -290,11 +295,6 @@ RRTFeedback build_feedback(
 }
 
 }  // namespace
-
-RRTCore::RRTCore(const rclcpp::Logger & logger)
-: logger_(logger)
-{
-}
 
 RRTResult RRTCore::plan(
   const pathfinder_core::InflatedVoxelGrid & grid,
@@ -321,13 +321,11 @@ RRTResult RRTCore::plan(
   if (rrt.point_collision(start_pt)) {
     result.success = false;
     result.message = "start in collision";
-    RCLCPP_WARN(logger_, "RRT*: start in collision");
     return result;
   }
   if (rrt.point_collision(goal_pt)) {
     result.success = false;
     result.message = "goal in collision";
-    RCLCPP_WARN(logger_, "RRT*: goal in collision");
     return result;
   }
 
@@ -338,11 +336,12 @@ RRTResult RRTCore::plan(
   int iter = 0;
   int iter_at_first_goal = -1;
   auto last_feedback = std::chrono::steady_clock::now();
+  double slept_sec = 0.0;  // viz-delay sleeps must not count against the compute budget
 
   for (; iter < params.max_iterations; ++iter) {
     const auto now_t = std::chrono::steady_clock::now();
     const double elapsed = std::chrono::duration<double>(now_t - t_start).count();
-    if (elapsed >= params.max_plan_time_sec) {
+    if (elapsed - slept_sec >= params.max_plan_time_sec) {
       break;
     }
     if (best_goal_idx >= 0 &&
@@ -383,12 +382,17 @@ RRTResult RRTCore::plan(
     {
       const double candidate_cost = cost_to_new + distance(x_new, goal_pt);
       if (candidate_cost < best_cost) {
-        rrt.add_node(goal_pt, new_idx, candidate_cost);
-        best_goal_idx = static_cast<int>(rrt.size()) - 1;
-        best_cost = candidate_cost;
-        if (iter_at_first_goal < 0) {
+        if (best_goal_idx < 0) {
+          rrt.add_node(goal_pt, new_idx, candidate_cost);
+          best_goal_idx = static_cast<int>(rrt.size()) - 1;
           iter_at_first_goal = iter;
+        } else {
+          // Rewire the existing goal node instead of appending a duplicate.
+          // nearest()/neighbors_within() scan the full tree, so a second goal
+          // node at the same position would corrupt those queries.
+          rrt.update_node(best_goal_idx, new_idx, candidate_cost);
         }
+        best_cost = candidate_cost;
       }
     }
 
@@ -398,6 +402,7 @@ RRTResult RRTCore::plan(
       feedback(build_feedback(rrt, best_goal_idx, best_cost, grid));
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        slept_sec += params.viz_delay_ms / 1000.0;
       }
       last_feedback = now_t;
     }
@@ -419,17 +424,9 @@ RRTResult RRTCore::plan(
     result.path = path_to_voxels(pts, grid);
     result.success = true;
     result.message = "ok";
-    RCLCPP_INFO(
-      logger_,
-      "RRT* succeeded: nodes=%zu cost=%.3f iters=%d time=%.1fms",
-      rrt.size(), best_cost, iter, total_ms);
   } else {
     result.success = false;
     result.message = "no path found in budget";
-    RCLCPP_WARN(
-      logger_,
-      "RRT* failed: nodes=%zu iters=%d time=%.1fms",
-      rrt.size(), iter, total_ms);
   }
 
   return result;

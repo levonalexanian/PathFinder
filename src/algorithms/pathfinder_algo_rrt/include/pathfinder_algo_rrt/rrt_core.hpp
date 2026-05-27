@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <rclcpp/logger.hpp>
-
 #include <pathfinder_core/voxel_grid.hpp>
 
 namespace pathfinder_algo_rrt
@@ -39,7 +37,7 @@ struct WorldPoint
 
 struct RRTFeedback
 {
-  int nodes_explored{0};
+  int nodes_expanded{0};
   std::vector<pathfinder_core::VoxelIndex> best_partial_path;
   double best_cost_so_far{0.0};
 
@@ -66,7 +64,7 @@ class RRTCore
 public:
   using FeedbackCallback = std::function<void(const RRTFeedback &)>;
 
-  explicit RRTCore(const rclcpp::Logger & logger);
+  RRTCore() = default;
 
   RRTResult plan(
     const pathfinder_core::InflatedVoxelGrid & grid,
@@ -74,9 +72,6 @@ public:
     const pathfinder_core::VoxelIndex & goal,
     const RRTParams & params,
     FeedbackCallback feedback);
-
-private:
-  rclcpp::Logger logger_;
 };
 
 }  // namespace pathfinder_algo_rrt

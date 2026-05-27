@@ -25,7 +25,7 @@ public:
     child_frame_ = get_parameter("child_frame").as_string();
 
     sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      source_topic_, rclcpp::QoS(50),
+      source_topic_, rclcpp::SensorDataQoS(),
       std::bind(&GzPoseRelayNode::on_msg, this, std::placeholders::_1));
 
     RCLCPP_INFO(

@@ -4,6 +4,8 @@
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 
+#include "pathfinder_core/demo_world_geometry.hpp"
+
 namespace
 {
 
@@ -26,29 +28,34 @@ void fill_box(
 
 int main(int argc, char ** argv)
 {
+  using namespace pathfinder_core::demo_world;
+
   const std::string out_path =
     (argc > 1) ? std::string(argv[1]) : std::string("maps/demo_world.bt");
 
-  const double res = 0.1;
-  octomap::OcTree tree(res);
+  octomap::OcTree tree(kMapResolution);
 
-  fill_box(tree, 0.0, 0.0, 0.0, 10.0, 10.0, 0.1, res);
+  fill_box(tree, 0.0, 0.0, kGroundOctomapZ0, kWorldXY, kWorldXY, kGroundOctomapZ1, kMapResolution);
 
-  const double post_size = 0.5;
-  const double post_height = 5.0;
-  const std::pair<double, double> posts[3] = {{2.0, 2.0}, {5.0, 7.0}, {8.0, 3.0}};
-  for (const auto & p : posts) {
+  for (const auto & p : kPostCenters) {
     fill_box(
       tree,
-      p.first - post_size / 2.0, p.second - post_size / 2.0, 0.1,
-      p.first + post_size / 2.0, p.second + post_size / 2.0, post_height,
-      res);
+      p[0] - kPostSize / 2.0, p[1] - kPostSize / 2.0, kPostOctomapZStart,
+      p[0] + kPostSize / 2.0, p[1] + kPostSize / 2.0, kPostHeight,
+      kMapResolution);
   }
 
-  fill_box(tree, 3.0, 4.0, 2.0, 5.0, 6.0, 2.5, res);
-  fill_box(tree, 6.5, 1.0, 2.0, 8.5, 3.0, 2.5, res);
+  for (const auto & oh : kOverhangs) {
+    fill_box(tree, oh.x0, oh.y0, kOverhangZ0, oh.x1, oh.y1, kOverhangZ1, kMapResolution);
+  }
 
-  fill_box(tree, 0.5, 0.5, 1.0, 2.5, 2.5, 1.2, res);
+  fill_box(tree, kCeilBX0, kCeilBY0, kCeilBZ0, kCeilBX1, kCeilBY1, kCeilBZ1, kMapResolution);
+
+  // Invisible ceiling at z=7: raises the planning grid's z-extent above the 5 m
+  // posts so the drone can reach a free cell directly over a post cap and land
+  // on top. Octomap-only by design — not mirrored in the visualizer or Gazebo
+  // world (a full roof would obscure the scene; the drone never flies near z=7).
+  fill_box(tree, 0.0, 0.0, kTopCeilingZ0, kWorldXY, kWorldXY, kTopCeilingZ1, kMapResolution);
 
   tree.updateInnerOccupancy();
 

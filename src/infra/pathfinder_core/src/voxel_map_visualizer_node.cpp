@@ -6,6 +6,9 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include "pathfinder_core/demo_world_geometry.hpp"
+#include "pathfinder_core/search_viz.hpp"
+
 namespace pathfinder_core
 {
 namespace
@@ -21,29 +24,50 @@ struct Box
 // Demo world geometry — primitive boxes for clean rendering (no z-fighting from
 // 15k overlapping voxel cubes). MUST match generate_demo_map.cpp and the gazebo
 // world SDFs *spatially*; visual thicknesses can differ slightly for aesthetics.
-// Color palette: muted distinct hues per obstacle type so they're identifiable
-// at a glance without being garish.
-constexpr float kGroundR = 0.28f, kGroundG = 0.32f, kGroundB = 0.40f;   // dark slate
-constexpr float kPostR   = 0.85f, kPostG   = 0.55f, kPostB   = 0.20f;   // warm amber
-constexpr float kOverR   = 0.20f, kOverG   = 0.62f, kOverB   = 0.70f;   // teal
-constexpr float kCeilR   = 0.58f, kCeilG   = 0.42f, kCeilB   = 0.75f;   // muted purple
-
 const std::vector<Box> kObstacles = {
   // Ground (top at z=0, slab 5cm thick extending down to z=-0.05). The car
   // spawns with wheel bottoms exactly at z=0 so the contact patch sits cleanly
   // on the slab surface with no settling.
-  {5.0, 5.0, -0.025, 10.0, 10.0, 0.05, kGroundR, kGroundG, kGroundB},
+  {
+    demo_world::kGroundVizCX, demo_world::kGroundVizCY, demo_world::kGroundVizCZ,
+    demo_world::kGroundVizSX, demo_world::kGroundVizSY, demo_world::kGroundVizSZ,
+    demo_world::kGroundR, demo_world::kGroundG, demo_world::kGroundB,
+  },
   // 3 posts (rooted at z=0, extend to z=5.0). The octomap actually has them
   // start at z=0.1 (above the ground voxels), but rendering them from z=0
   // makes them look planted in the floor instead of floating above it.
-  {2.0, 2.0, 2.5, 0.5, 0.5, 5.0, kPostR, kPostG, kPostB},
-  {5.0, 7.0, 2.5, 0.5, 0.5, 5.0, kPostR, kPostG, kPostB},
-  {8.0, 3.0, 2.5, 0.5, 0.5, 5.0, kPostR, kPostG, kPostB},
+  {
+    demo_world::kPostCenters[0][0], demo_world::kPostCenters[0][1], demo_world::kPostVizCZ,
+    demo_world::kPostSize, demo_world::kPostSize, demo_world::kPostVizSZ,
+    demo_world::kPostR, demo_world::kPostG, demo_world::kPostB,
+  },
+  {
+    demo_world::kPostCenters[1][0], demo_world::kPostCenters[1][1], demo_world::kPostVizCZ,
+    demo_world::kPostSize, demo_world::kPostSize, demo_world::kPostVizSZ,
+    demo_world::kPostR, demo_world::kPostG, demo_world::kPostB,
+  },
+  {
+    demo_world::kPostCenters[2][0], demo_world::kPostCenters[2][1], demo_world::kPostVizCZ,
+    demo_world::kPostSize, demo_world::kPostSize, demo_world::kPostVizSZ,
+    demo_world::kPostR, demo_world::kPostG, demo_world::kPostB,
+  },
   // 2 overhangs (z=2.0..2.5, 2x2 footprint)
-  {4.0, 5.0, 2.25, 2.0, 2.0, 0.5, kOverR, kOverG, kOverB},
-  {7.5, 2.0, 2.25, 2.0, 2.0, 0.5, kOverR, kOverG, kOverB},
+  {
+    demo_world::kOverhangs[0].cx, demo_world::kOverhangs[0].cy, demo_world::kOverhangVizCZ,
+    demo_world::kOverhangSX, demo_world::kOverhangSY, demo_world::kOverhangSZ,
+    demo_world::kOverR, demo_world::kOverG, demo_world::kOverB,
+  },
+  {
+    demo_world::kOverhangs[1].cx, demo_world::kOverhangs[1].cy, demo_world::kOverhangVizCZ,
+    demo_world::kOverhangSX, demo_world::kOverhangSY, demo_world::kOverhangSZ,
+    demo_world::kOverR, demo_world::kOverG, demo_world::kOverB,
+  },
   // Low ceiling (z=1.0..1.2, 2x2 footprint)
-  {1.5, 1.5, 1.1, 2.0, 2.0, 0.2, kCeilR, kCeilG, kCeilB},
+  {
+    demo_world::kCeilVizCX, demo_world::kCeilVizCY, demo_world::kCeilVizCZ,
+    demo_world::kCeilVizSX, demo_world::kCeilVizSY, demo_world::kCeilVizSZ,
+    demo_world::kCeilR, demo_world::kCeilG, demo_world::kCeilB,
+  },
 };
 
 }  // namespace
@@ -71,16 +95,11 @@ private:
     int id = 0;
     for (const auto & box : kObstacles) {
       visualization_msgs::msg::Marker m;
-      m.header.frame_id = "map";
-      m.header.stamp = now();
-      m.ns = "voxel_map";
-      m.id = id++;
+      viz::fill_marker_header(m, now(), id++, "voxel_map");
       m.type = visualization_msgs::msg::Marker::CUBE;
-      m.action = visualization_msgs::msg::Marker::ADD;
       m.pose.position.x = box.cx;
       m.pose.position.y = box.cy;
       m.pose.position.z = box.cz;
-      m.pose.orientation.w = 1.0;
       m.scale.x = box.sx;
       m.scale.y = box.sy;
       m.scale.z = box.sz;

@@ -5,6 +5,13 @@ DEV_TTY := $(COMPOSE) run --rm --service-ports dev
 TOOLCHAIN := /workspace/build/conan_toolchain.cmake
 SANITIZERS_INCLUDE := /workspace/cmake/sanitizers.cmake
 
+# Sanitizer runtime suppressions, applied to every in-container run. A normal
+# Release binary has no sanitizer runtime to read these, so setting them
+# unconditionally is a no-op there; for asan/tsan builds they silence the known
+# third-party FastDDS / ROS / Gazebo noise documented in sanitizers/*.supp.
+# asan.supp is LSan syntax, so it goes via LSAN_OPTIONS (not ASAN_OPTIONS).
+SAN_RUNTIME := TSAN_OPTIONS=suppressions=/workspace/sanitizers/tsan.supp LSAN_OPTIONS=suppressions=/workspace/sanitizers/asan.supp
+
 # Override with HEADLESS=true to run Gazebo server-only (no GUI). Useful when
 # DISPLAY isn't set or the host doesn't have X11.
 HEADLESS ?= false
@@ -65,16 +72,16 @@ build:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon build --cmake-args -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DCMAKE_PROJECT_INCLUDE=$(SANITIZERS_INCLUDE) $(SAN_CMAKE_ARGS)'
 
 test:
-	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && colcon test && colcon test-result --verbose'
+	$(DEV) bash -c 'export $(SAN_RUNTIME) && source /opt/ros/jazzy/setup.bash && colcon test && colcon test-result --verbose'
 
 generate-map:
 	$(DEV) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && mkdir -p maps && ros2 run pathfinder_core generate_demo_map maps/demo_world.bt'
 
 launch-car:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_car.launch.py headless:=$(HEADLESS)'
+	$(DEV_TTY) bash -c 'export $(SAN_RUNTIME) && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_car.launch.py headless:=$(HEADLESS)'
 
 launch-drone:
-	$(DEV_TTY) bash -c 'source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_drone.launch.py headless:=$(HEADLESS)'
+	$(DEV_TTY) bash -c 'export $(SAN_RUNTIME) && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch pathfinder_bringup demo_drone.launch.py headless:=$(HEADLESS)'
 
 sh:
 	$(DEV_TTY) bash

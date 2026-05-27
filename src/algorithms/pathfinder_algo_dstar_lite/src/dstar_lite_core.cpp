@@ -9,40 +9,16 @@
 #include <utility>
 #include <vector>
 
-#include <rclcpp/logging.hpp>
+#include <pathfinder_core/marker_decimation.hpp>
+#include <pathfinder_core/voxel_grid.hpp>
 
 namespace pathfinder_algo_dstar_lite
 {
-
-namespace
-{
-
-constexpr std::size_t kMaxSampledOpen = 500;
-constexpr std::size_t kMaxSampledClosed = 500;
-
-double voxel_distance_meters(
-  const pathfinder_core::VoxelIndex & a,
-  const pathfinder_core::VoxelIndex & b,
-  double resolution)
-{
-  const double dx = static_cast<double>(a.x - b.x);
-  const double dy = static_cast<double>(a.y - b.y);
-  const double dz = static_cast<double>(a.z - b.z);
-  return std::sqrt(dx * dx + dy * dy + dz * dz) * resolution;
-}
-
-}  // namespace
-
-DstarLiteCore::DstarLiteCore(const rclcpp::Logger & logger)
-: logger_(logger)
-{
-}
 
 void DstarLiteCore::reset()
 {
   g_.clear();
   rhs_.clear();
-  in_queue_.clear();
   queue_key_.clear();
   open_ = OpenQueue();
   k_m_ = 0.0;
@@ -60,9 +36,8 @@ double DstarLiteCore::heuristic(
   const pathfinder_core::InflatedVoxelGrid & grid,
   std::size_t a, std::size_t b) const
 {
-  const auto va = grid.from_linear_index(a);
-  const auto vb = grid.from_linear_index(b);
-  return voxel_distance_meters(va, vb, resolution_);
+  return pathfinder_core::voxel_distance(
+    grid.from_linear_index(a), grid.from_linear_index(b), resolution_);
 }
 
 double DstarLiteCore::edge_cost(
@@ -74,7 +49,7 @@ double DstarLiteCore::edge_cost(
   if (grid.is_occupied(va) || grid.is_occupied(vb)) {
     return kInf;
   }
-  return voxel_distance_meters(va, vb, resolution_);
+  return pathfinder_core::voxel_distance(va, vb, resolution_);
 }
 
 DstarLiteCore::Key DstarLiteCore::calculate_key(
@@ -82,7 +57,7 @@ DstarLiteCore::Key DstarLiteCore::calculate_key(
 {
   const double min_g_rhs = std::min(g_[flat], rhs_[flat]);
   if (min_g_rhs == kInf) {
-    return Key{kInf, kInf};
+    return kSentinelKey;
   }
   return Key{min_g_rhs + heuristic(grid, s_start_flat_, flat) + k_m_, min_g_rhs};
 }
@@ -108,8 +83,7 @@ void DstarLiteCore::initialize_search(
   const std::size_t n = grid.cell_count();
   g_.assign(n, kInf);
   rhs_.assign(n, kInf);
-  in_queue_.assign(n, 0);
-  queue_key_.assign(n, Key{kInf, kInf});
+  queue_key_.assign(n, kSentinelKey);
   open_ = OpenQueue();
   k_m_ = 0.0;
   s_start_flat_ = start_flat;
@@ -118,7 +92,6 @@ void DstarLiteCore::initialize_search(
   rhs_[goal_flat] = 0.0;
   const Key key{heuristic(grid, start_flat, goal_flat), 0.0};
   queue_key_[goal_flat] = key;
-  in_queue_[goal_flat] = 1;
   open_.push({key, goal_flat});
   initialized_ = true;
 }
@@ -137,11 +110,9 @@ void DstarLiteCore::update_vertex(
   if (g_[flat] != rhs_[flat]) {
     const Key key = calculate_key(grid, flat);
     queue_key_[flat] = key;
-    in_queue_[flat] = 1;
     open_.push({key, flat});
-  } else if (in_queue_[flat]) {
-    in_queue_[flat] = 0;
-    queue_key_[flat] = Key{kInf, kInf};
+  } else if (queue_key_[flat] != kSentinelKey) {
+    queue_key_[flat] = kSentinelKey;
   }
 }
 
@@ -164,19 +135,20 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
       return;
     }
     DstarLiteFeedback fb;
-    fb.nodes_explored = expansions;
-    fb.sampled_open_flat = sample_open_flats(kMaxSampledOpen);
-    fb.sampled_closed_flat = sample_locked_flats(kMaxSampledClosed);
+    fb.nodes_expanded = expansions;
+    fb.sampled_open_flat = sample_open_flats(pathfinder_core::kMaxVizVoxels);
+    fb.sampled_closed_flat = sample_locked_flats(pathfinder_core::kMaxVizVoxels);
     fb.best_partial_path = extract_path(grid, static_cast<std::size_t>(grid.cell_count()));
     fb.best_cost_so_far = g_[s_start_flat_];
     feedback(fb);
   };
 
+  double slept_sec = 0.0;  // viz-delay sleeps must not count against the compute budget
   while (!open_.empty()) {
     const auto now_wall = std::chrono::steady_clock::now();
     const double elapsed_sec =
       std::chrono::duration<double>(now_wall - start_wall).count();
-    if (elapsed_sec > params.max_plan_time_sec) {
+    if (elapsed_sec - slept_sec > params.max_plan_time_sec) {
       stats.timed_out = true;
       return stats;
     }
@@ -191,7 +163,8 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
 
     open_.pop();
 
-    if (!in_queue_[top.flat]) {
+    // Skip stale queue entries: membership is gone or key was superseded.
+    if (queue_key_[top.flat] == kSentinelKey) {
       continue;
     }
     if (queue_key_[top.flat] != top.key) {
@@ -205,8 +178,8 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
       continue;
     }
 
-    in_queue_[top.flat] = 0;
-    queue_key_[top.flat] = Key{kInf, kInf};
+    // Expand: mark as settled (no longer in open set).
+    queue_key_[top.flat] = kSentinelKey;
 
     if (g_[top.flat] > rhs_[top.flat]) {
       g_[top.flat] = rhs_[top.flat];
@@ -255,6 +228,7 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
       emit_feedback(stats.expansions);
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        slept_sec += params.viz_delay_ms / 1000.0;
       }
       since_feedback = 0;
       last_feedback = now_wall;
@@ -316,7 +290,7 @@ std::vector<std::size_t> DstarLiteCore::sample_open_flats(std::size_t max_count)
   while (!copy.empty() && out.size() < max_count) {
     const auto top = copy.top();
     copy.pop();
-    if (!in_queue_[top.flat] || queue_key_[top.flat] != top.key) {
+    if (queue_key_[top.flat] == kSentinelKey || queue_key_[top.flat] != top.key) {
       continue;
     }
     out.push_back(top.flat);
@@ -326,30 +300,17 @@ std::vector<std::size_t> DstarLiteCore::sample_open_flats(std::size_t max_count)
 
 std::vector<std::size_t> DstarLiteCore::sample_locked_flats(std::size_t max_count) const
 {
-  std::vector<std::size_t> out;
   if (max_count == 0 || g_.empty()) {
-    return out;
+    return {};
   }
-  std::size_t total = 0;
+  // Closed set: settled (g == rhs, finite) and no longer in open queue.
+  std::vector<std::uint8_t> closed_flags(g_.size(), 0);
   for (std::size_t i = 0; i < g_.size(); ++i) {
-    if (g_[i] != kInf && g_[i] == rhs_[i]) {
-      ++total;
+    if (g_[i] != kInf && g_[i] == rhs_[i] && queue_key_[i] == kSentinelKey) {
+      closed_flags[i] = 1;
     }
   }
-  if (total == 0) {
-    return out;
-  }
-  const std::size_t stride = std::max<std::size_t>(1, total / max_count);
-  std::size_t seen = 0;
-  for (std::size_t i = 0; i < g_.size() && out.size() < max_count; ++i) {
-    if (g_[i] != kInf && g_[i] == rhs_[i]) {
-      if ((seen % stride) == 0) {
-        out.push_back(i);
-      }
-      ++seen;
-    }
-  }
-  return out;
+  return pathfinder_core::sample_flag_indices(closed_flags, max_count);
 }
 
 DstarLiteResult DstarLiteCore::plan(
@@ -390,20 +351,8 @@ DstarLiteResult DstarLiteCore::plan(
 
   if (grid_changed || goal_changed) {
     initialize_search(grid, start_flat, goal_flat);
-    RCLCPP_INFO(
-      logger_,
-      "D* Lite: %s (start=%zu goal=%zu cells=%zu)",
-      grid_changed ? "full rebuild (grid changed or first call)"
-                   : "goal changed; reinitializing",
-      start_flat, goal_flat, grid.cell_count());
   } else if (start_changed) {
     shift_start(grid, start_flat);
-    RCLCPP_INFO(
-      logger_,
-      "D* Lite: incremental replan, start moved (k_m=%.3f)",
-      k_m_);
-  } else {
-    RCLCPP_INFO(logger_, "D* Lite: nothing changed, replaying solution");
   }
 
   last_grid_ = &grid;
@@ -421,19 +370,11 @@ DstarLiteResult DstarLiteCore::plan(
   if (stats.timed_out) {
     result.success = false;
     result.message = "time budget exceeded";
-    RCLCPP_WARN(
-      logger_,
-      "D* Lite aborted after %.2f ms; %d expansions",
-      result.plan_duration_ms, stats.expansions);
     return result;
   }
   if (!stats.reached_start) {
     result.success = false;
     result.message = "no path found";
-    RCLCPP_WARN(
-      logger_,
-      "D* Lite failed: open exhausted (%d expansions, %.2f ms)",
-      stats.expansions, result.plan_duration_ms);
     return result;
   }
 
@@ -448,10 +389,6 @@ DstarLiteResult DstarLiteCore::plan(
   result.path = path_voxels;
   result.success = true;
   result.message = "ok";
-  RCLCPP_INFO(
-    logger_,
-    "D* Lite ok: %zu voxels, %d expansions, %.2f ms",
-    path_voxels.size(), stats.expansions, result.plan_duration_ms);
   return result;
 }
 

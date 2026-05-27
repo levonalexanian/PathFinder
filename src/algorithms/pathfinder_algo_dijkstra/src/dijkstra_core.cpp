@@ -1,7 +1,6 @@
 #include "pathfinder_algo_dijkstra/dijkstra_core.hpp"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -11,90 +10,12 @@
 #include <thread>
 #include <vector>
 
-#include <rclcpp/logging.hpp>
+#include <pathfinder_core/marker_decimation.hpp>
+#include <pathfinder_core/planner_utils.hpp>
+#include <pathfinder_core/voxel_grid.hpp>
 
 namespace pathfinder_algo_dijkstra
 {
-
-namespace
-{
-
-constexpr std::array<std::array<int, 3>, 26> kNeighborOffsets = []() {
-  std::array<std::array<int, 3>, 26> out{};
-  int i = 0;
-  for (int dx = -1; dx <= 1; ++dx) {
-    for (int dy = -1; dy <= 1; ++dy) {
-      for (int dz = -1; dz <= 1; ++dz) {
-        if (dx == 0 && dy == 0 && dz == 0) {
-          continue;
-        }
-        out[i++] = {dx, dy, dz};
-      }
-    }
-  }
-  return out;
-}();
-
-std::vector<std::size_t> sample_flat(
-  const std::vector<std::uint8_t> & flags,
-  std::size_t max_count)
-{
-  std::vector<std::size_t> out;
-  std::size_t count = 0;
-  for (auto f : flags) {
-    if (f) {
-      ++count;
-    }
-  }
-  if (count == 0) {
-    return out;
-  }
-  const std::size_t stride = std::max<std::size_t>(1, count / max_count);
-  out.reserve(std::min(count, max_count));
-  std::size_t seen = 0;
-  for (std::size_t i = 0; i < flags.size(); ++i) {
-    if (!flags[i]) {
-      continue;
-    }
-    if ((seen++ % stride) != 0) {
-      continue;
-    }
-    out.push_back(i);
-    if (out.size() >= max_count) {
-      break;
-    }
-  }
-  return out;
-}
-
-std::vector<pathfinder_core::VoxelIndex> reconstruct_path(
-  const pathfinder_core::InflatedVoxelGrid & grid,
-  const std::vector<std::int32_t> & parent,
-  std::int32_t end_lin)
-{
-  std::vector<std::int32_t> chain;
-  chain.push_back(end_lin);
-  while (parent[chain.back()] >= 0) {
-    chain.push_back(parent[chain.back()]);
-    if (chain.size() > 100000) {
-      break;
-    }
-  }
-  std::reverse(chain.begin(), chain.end());
-  std::vector<pathfinder_core::VoxelIndex> path;
-  path.reserve(chain.size());
-  for (auto lin : chain) {
-    path.push_back(grid.from_linear_index(static_cast<std::size_t>(lin)));
-  }
-  return path;
-}
-
-}  // namespace
-
-DijkstraCore::DijkstraCore(const rclcpp::Logger & logger)
-: logger_(logger)
-{
-}
 
 DijkstraResult DijkstraCore::plan(
   const pathfinder_core::InflatedVoxelGrid & grid,
@@ -138,8 +59,8 @@ DijkstraResult DijkstraCore::plan(
 
   const double res = grid.resolution();
   std::array<double, 26> step_costs{};
-  for (std::size_t i = 0; i < kNeighborOffsets.size(); ++i) {
-    const auto & d = kNeighborOffsets[i];
+  for (std::size_t i = 0; i < pathfinder_core::kNeighborOffsets26.size(); ++i) {
+    const auto & d = pathfinder_core::kNeighborOffsets26[i];
     step_costs[i] = res * std::sqrt(
       static_cast<double>(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]));
   }
@@ -175,13 +96,20 @@ DijkstraResult DijkstraCore::plan(
   open.push({0.0, start_lin});
   in_open[start_lin] = 1;
 
-  const auto deadline = std::chrono::steady_clock::now() +
+  auto deadline = std::chrono::steady_clock::now() +
     std::chrono::duration<double>(params.max_plan_time_sec);
   auto last_feedback = std::chrono::steady_clock::now();
   std::int32_t expanded = 0;
-  double last_cost = 0.0;
+  std::int32_t nodes_since_feedback = 0;
 
   while (!open.empty()) {
+    if (std::chrono::steady_clock::now() > deadline) {
+      out.message = "time budget exceeded";
+      out.nodes_expanded = expanded;
+      finalize_duration();
+      return out;
+    }
+
     PqEntry top = open.top();
     open.pop();
     if (closed[top.idx]) {
@@ -193,28 +121,22 @@ DijkstraResult DijkstraCore::plan(
     closed[top.idx] = 1;
     in_open[top.idx] = 0;
     ++expanded;
-    last_cost = top.cost;
+    ++nodes_since_feedback;
 
     if (top.idx == goal_lin) {
       out.success = true;
       out.message = "ok";
       out.nodes_expanded = expanded;
-      out.path = reconstruct_path(grid, parent, top.idx);
-      finalize_duration();
-      return out;
-    }
-
-    if ((expanded & 1023) == 0 && std::chrono::steady_clock::now() > deadline) {
-      out.message = "time budget exceeded";
-      out.nodes_expanded = expanded;
+      out.path = pathfinder_core::reconstruct_path_from_parents(
+        parent, grid, static_cast<std::size_t>(top.idx));
       finalize_duration();
       return out;
     }
 
     const pathfinder_core::VoxelIndex cur = grid.from_linear_index(
       static_cast<std::size_t>(top.idx));
-    for (std::size_t k = 0; k < kNeighborOffsets.size(); ++k) {
-      const auto & d = kNeighborOffsets[k];
+    for (std::size_t k = 0; k < pathfinder_core::kNeighborOffsets26.size(); ++k) {
+      const auto & d = pathfinder_core::kNeighborOffsets26[k];
       const int nx = cur.x + d[0];
       const int ny = cur.y + d[1];
       const int nz = cur.z + d[2];
@@ -234,35 +156,38 @@ DijkstraResult DijkstraCore::plan(
       }
     }
 
-    const bool by_count = params.feedback_node_stride > 0 &&
-      (expanded % params.feedback_node_stride) == 0;
+    const bool by_count = params.feedback_every_nodes > 0 &&
+      (nodes_since_feedback >= params.feedback_every_nodes);
     bool by_time = false;
-    if (params.feedback_time_stride_sec > 0.0 && (expanded & 511) == 0) {
+    if (params.feedback_every_seconds > 0.0 && (expanded & 511) == 0) {
       const auto now = std::chrono::steady_clock::now();
       by_time = std::chrono::duration<double>(now - last_feedback).count() >=
-        params.feedback_time_stride_sec;
+        params.feedback_every_seconds;
     }
     if (feedback && (by_count || by_time)) {
       last_feedback = std::chrono::steady_clock::now();
+      nodes_since_feedback = 0;
       DijkstraFeedback fb{};
-      fb.nodes_explored = expanded;
+      fb.nodes_expanded = expanded;
       fb.best_cost_so_far = top.cost;
-      fb.best_partial_path = reconstruct_path(grid, parent, top.idx);
-      fb.sampled_closed_flat = sample_flat(closed, 500);
-      fb.sampled_open_flat = sample_flat(in_open, 500);
+      fb.best_partial_path = pathfinder_core::reconstruct_path_from_parents(
+        parent, grid, static_cast<std::size_t>(top.idx));
+      fb.sampled_closed_flat = pathfinder_core::sample_flag_indices(
+        closed, pathfinder_core::kMaxVizVoxels);
+      fb.sampled_open_flat = pathfinder_core::sample_flag_indices(
+        in_open, pathfinder_core::kMaxVizVoxels);
       feedback(fb);
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        // exclude the intentional viz pause from the compute budget
+        deadline += std::chrono::milliseconds(params.viz_delay_ms);
       }
     }
   }
 
   out.message = "no path found";
   out.nodes_expanded = expanded;
-  (void)last_cost;
   finalize_duration();
-  RCLCPP_DEBUG(
-    logger_, "dijkstra: exhausted open set after %d expansions", expanded);
   return out;
 }
 

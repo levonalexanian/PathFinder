@@ -24,7 +24,7 @@
           "instanceId": "f2f2f2f2-2222-4222-8222-bbbbbbbbbbbb",
           "layerId": "foxglove.Urdf",
           "sourceType": "url",
-          "url": "https://raw.githubusercontent.com/levonalexanian/PathFinder/refs/heads/chore/cleanup/src/robots/pathfinder_robot_drone/urdf/drone.urdf",
+          "url": "https://raw.githubusercontent.com/levonalexanian/PathFinder/refs/heads/main/src/robots/pathfinder_robot_drone/urdf/drone.urdf",
           "filePath": "",
           "parameter": "",
           "topic": "",
