@@ -86,7 +86,7 @@ def generate_launch_description():
         arguments=[
             "-file", drone_sdf_path,
             "-name", "pathfinder_drone",
-            "-x", "0", "-y", "0", "-z", "0.5",
+            "-x", "4", "-y", "5", "-z", "2.55",
         ],
     )
 
