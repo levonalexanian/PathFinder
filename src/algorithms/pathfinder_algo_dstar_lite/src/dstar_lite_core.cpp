@@ -143,11 +143,12 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
     feedback(fb);
   };
 
+  double slept_sec = 0.0;  // viz-delay sleeps must not count against the compute budget
   while (!open_.empty()) {
     const auto now_wall = std::chrono::steady_clock::now();
     const double elapsed_sec =
       std::chrono::duration<double>(now_wall - start_wall).count();
-    if (elapsed_sec > params.max_plan_time_sec) {
+    if (elapsed_sec - slept_sec > params.max_plan_time_sec) {
       stats.timed_out = true;
       return stats;
     }
@@ -227,6 +228,7 @@ DstarLiteCore::ComputeStats DstarLiteCore::compute_shortest_path(
       emit_feedback(stats.expansions);
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        slept_sec += params.viz_delay_ms / 1000.0;
       }
       since_feedback = 0;
       last_feedback = now_wall;

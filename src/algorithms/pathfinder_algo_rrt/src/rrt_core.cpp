@@ -336,11 +336,12 @@ RRTResult RRTCore::plan(
   int iter = 0;
   int iter_at_first_goal = -1;
   auto last_feedback = std::chrono::steady_clock::now();
+  double slept_sec = 0.0;  // viz-delay sleeps must not count against the compute budget
 
   for (; iter < params.max_iterations; ++iter) {
     const auto now_t = std::chrono::steady_clock::now();
     const double elapsed = std::chrono::duration<double>(now_t - t_start).count();
-    if (elapsed >= params.max_plan_time_sec) {
+    if (elapsed - slept_sec >= params.max_plan_time_sec) {
       break;
     }
     if (best_goal_idx >= 0 &&
@@ -401,6 +402,7 @@ RRTResult RRTCore::plan(
       feedback(build_feedback(rrt, best_goal_idx, best_cost, grid));
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        slept_sec += params.viz_delay_ms / 1000.0;
       }
       last_feedback = now_t;
     }

@@ -96,7 +96,7 @@ DijkstraResult DijkstraCore::plan(
   open.push({0.0, start_lin});
   in_open[start_lin] = 1;
 
-  const auto deadline = std::chrono::steady_clock::now() +
+  auto deadline = std::chrono::steady_clock::now() +
     std::chrono::duration<double>(params.max_plan_time_sec);
   auto last_feedback = std::chrono::steady_clock::now();
   std::int32_t expanded = 0;
@@ -179,6 +179,8 @@ DijkstraResult DijkstraCore::plan(
       feedback(fb);
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        // exclude the intentional viz pause from the compute budget
+        deadline += std::chrono::milliseconds(params.viz_delay_ms);
       }
     }
   }

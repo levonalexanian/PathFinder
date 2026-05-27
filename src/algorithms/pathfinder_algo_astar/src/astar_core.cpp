@@ -124,11 +124,12 @@ AstarResult AstarCore::plan(
     feedback(fb);
   };
 
+  double slept_sec = 0.0;  // viz-delay sleeps must not count against the compute budget
   while (!open.empty()) {
     const auto now_wall = std::chrono::steady_clock::now();
     const double elapsed_sec =
       std::chrono::duration<double>(now_wall - start_wall).count();
-    if (elapsed_sec > max_plan_time_sec) {
+    if (elapsed_sec - slept_sec > max_plan_time_sec) {
       timed_out = true;
       break;
     }
@@ -183,6 +184,7 @@ AstarResult AstarCore::plan(
       emit_feedback(true);
       if (params.viz_delay_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(params.viz_delay_ms));
+        slept_sec += params.viz_delay_ms / 1000.0;
       }
       nodes_since_feedback = 0;
       last_feedback_time = now_wall;
