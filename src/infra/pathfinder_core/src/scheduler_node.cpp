@@ -10,6 +10,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <octomap_msgs/msg/octomap.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -43,8 +44,10 @@ public:
   {
     declare_parameter<std::string>("default_algorithm", "astar");
     declare_parameter<std::string>("base_frame", "base_link");
+    declare_parameter<double>("viz_hold_sec", 2.0);
     active_algorithm_ = get_parameter("default_algorithm").as_string();
     base_frame_ = get_parameter("base_frame").as_string();
+    viz_hold_sec_ = get_parameter("viz_hold_sec").as_double();
 
     status_pub_ = create_publisher<pathfinder_msgs::msg::PlannerStatus>(
       kPlannerStatusTopic, rclcpp::QoS(10));
@@ -180,11 +183,25 @@ private:
           return;
         }
         if (wrapped.result->success) {
-          path_pub_->publish(wrapped.result->path);
           last_plan_duration_ms_ = wrapped.result->plan_duration_ms;
           RCLCPP_INFO(
-            get_logger(), "planner succeeded in %.2f ms",
-            wrapped.result->plan_duration_ms);
+            get_logger(),
+            "planner succeeded in %.2f ms; holding search viz %.1fs before moving",
+            wrapped.result->plan_duration_ms, viz_hold_sec_);
+          // Hold the search cubes on screen briefly, then clear them and only
+          // THEN publish the path so the robot starts moving. Timer-based, not a
+          // blocking sleep: this callback runs on the action client's executor
+          // thread, so sleeping here would stall feedback/result handling.
+          pending_path_ = wrapped.result->path;
+          const auto hold = std::chrono::milliseconds(
+            static_cast<int64_t>(viz_hold_sec_ * 1000.0));
+          viz_hold_timer_ = create_wall_timer(
+            hold,
+            [this]() {
+              viz_hold_timer_->cancel();
+              publish_clear_markers();
+              path_pub_->publish(pending_path_);
+            });
         } else {
           RCLCPP_WARN(
             get_logger(), "planner reported failure: %s",
@@ -205,12 +222,25 @@ private:
     status_pub_->publish(status);
   }
 
+  void publish_clear_markers()
+  {
+    visualization_msgs::msg::MarkerArray clear;
+    visualization_msgs::msg::Marker m;
+    m.header.frame_id = map_frame_;
+    m.header.stamp = now();
+    m.action = visualization_msgs::msg::Marker::DELETEALL;
+    clear.markers.push_back(m);
+    marker_pub_->publish(clear);
+  }
+
   std::string active_algorithm_;
   std::string map_frame_ = "map";
   std::string base_frame_ = "base_link";
   std::atomic<bool> have_map_{false};
   std::atomic<bool> planning_{false};
   double last_plan_duration_ms_ = 0.0;
+  double viz_hold_sec_ = 2.0;
+  nav_msgs::msg::Path pending_path_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -223,6 +253,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp_action::Client<RequestPath>::SharedPtr action_client_;
   rclcpp::TimerBase::SharedPtr status_timer_;
+  rclcpp::TimerBase::SharedPtr viz_hold_timer_;
 };
 
 int main(int argc, char ** argv)
