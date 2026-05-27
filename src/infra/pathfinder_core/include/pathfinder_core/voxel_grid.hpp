@@ -31,10 +31,47 @@ struct VoxelIndex
   }
 };
 
+// All 26 face/edge/corner neighbor offsets in (dx,dy,dz) form. Exposed so
+// callers that iterate neighbors by linear arithmetic (e.g. Dijkstra) can
+// share the table instead of maintaining their own copy.
+constexpr std::array<std::array<int, 3>, 26> kNeighborOffsets26 = []() {
+  std::array<std::array<int, 3>, 26> out{};
+  int i = 0;
+  for (int dx = -1; dx <= 1; ++dx) {
+    for (int dy = -1; dy <= 1; ++dy) {
+      for (int dz = -1; dz <= 1; ++dz) {
+        if (dx == 0 && dy == 0 && dz == 0) {
+          continue;
+        }
+        out[i++] = {dx, dy, dz};
+      }
+    }
+  }
+  return out;
+}();
+
+// Euclidean distance between two VoxelIndex values scaled to metres.
+inline double voxel_distance(
+  const VoxelIndex & a, const VoxelIndex & b, double resolution) noexcept
+{
+  const double dx = static_cast<double>(a.x - b.x);
+  const double dy = static_cast<double>(a.y - b.y);
+  const double dz = static_cast<double>(a.z - b.z);
+  return std::sqrt(dx * dx + dy * dy + dz * dz) * resolution;
+}
+
 class InflatedVoxelGrid
 {
 public:
   InflatedVoxelGrid(const octomap::OcTree & tree, double robot_radius);
+
+  // Raw-data constructor for unit testing: supply dims, min_bound, resolution,
+  // and a pre-built occupancy vector (length must equal dims[0]*dims[1]*dims[2]).
+  InflatedVoxelGrid(
+    std::array<int, 3> dims,
+    std::array<double, 3> min_bound,
+    double resolution,
+    std::vector<std::uint8_t> occupied);
 
   InflatedVoxelGrid(const InflatedVoxelGrid &) = delete;
   InflatedVoxelGrid & operator=(const InflatedVoxelGrid &) = delete;
