@@ -2,14 +2,15 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <queue>
 #include <thread>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
+#include <pathfinder_core/marker_decimation.hpp>
+#include <pathfinder_core/planner_utils.hpp>
+#include <pathfinder_core/voxel_grid.hpp>
 
 namespace pathfinder_algo_astar
 {
@@ -17,10 +18,12 @@ namespace pathfinder_algo_astar
 namespace
 {
 
-constexpr std::size_t kMaxSampledVoxels = 500;
-
 using pathfinder_core::InflatedVoxelGrid;
 using pathfinder_core::VoxelIndex;
+using pathfinder_core::voxel_distance;
+using pathfinder_core::kMaxVizVoxels;
+using pathfinder_core::sample_flag_indices;
+using pathfinder_core::reconstruct_path_from_parents;
 
 struct OpenEntry
 {
@@ -56,39 +59,7 @@ struct SearchBuffers
   }
 };
 
-std::vector<VoxelIndex> reconstruct_path(
-  const SearchBuffers & buf,
-  const InflatedVoxelGrid & grid,
-  std::size_t goal_flat)
-{
-  std::vector<VoxelIndex> path;
-  std::size_t cur = goal_flat;
-  while (true) {
-    path.push_back(grid.from_linear_index(cur));
-    const int32_t prev = buf.came_from[cur];
-    if (prev < 0) {
-      break;
-    }
-    cur = static_cast<std::size_t>(prev);
-  }
-  std::reverse(path.begin(), path.end());
-  return path;
-}
-
-double voxel_distance(const VoxelIndex & a, const VoxelIndex & b, double resolution)
-{
-  const double dx = static_cast<double>(a.x - b.x);
-  const double dy = static_cast<double>(a.y - b.y);
-  const double dz = static_cast<double>(a.z - b.z);
-  return std::sqrt(dx * dx + dy * dy + dz * dz) * resolution;
-}
-
 }  // namespace
-
-AstarCore::AstarCore(const rclcpp::Logger & logger)
-: logger_(logger)
-{
-}
 
 AstarResult AstarCore::plan(
   const InflatedVoxelGrid & grid,
@@ -130,40 +101,21 @@ AstarResult AstarCore::plan(
       return;
     }
     AstarFeedback fb;
-    fb.nodes_explored = nodes_expanded;
+    fb.nodes_expanded = nodes_expanded;
 
     {
       OpenQueue copy = open;
-      while (!copy.empty() && fb.sampled_open_flat.size() < kMaxSampledVoxels) {
+      while (!copy.empty() && fb.sampled_open_flat.size() < kMaxVizVoxels) {
         fb.sampled_open_flat.push_back(copy.top().flat);
         copy.pop();
       }
     }
 
-    const std::size_t closed_total = buf.closed.size();
-    std::size_t closed_count = 0;
-    for (std::size_t i = 0; i < closed_total; ++i) {
-      if (buf.closed[i]) {
-        ++closed_count;
-      }
-    }
-    const std::size_t stride = std::max<std::size_t>(
-      1, closed_count / kMaxSampledVoxels);
-    std::size_t seen = 0;
-    for (std::size_t i = 0;
-         i < closed_total && fb.sampled_closed_flat.size() < kMaxSampledVoxels;
-         ++i)
-    {
-      if (buf.closed[i]) {
-        if (seen % stride == 0) {
-          fb.sampled_closed_flat.push_back(i);
-        }
-        ++seen;
-      }
-    }
+    fb.sampled_closed_flat = sample_flag_indices(buf.closed, kMaxVizVoxels);
 
     if (include_best_path) {
-      fb.best_partial_path = reconstruct_path(buf, grid, best_open_flat);
+      fb.best_partial_path = reconstruct_path_from_parents(
+        buf.came_from, grid, best_open_flat);
       const auto best_v = grid.from_linear_index(best_open_flat);
       fb.best_cost_so_far = buf.g_score[best_open_flat] +
         voxel_distance(best_v, goal, res);
@@ -245,23 +197,15 @@ AstarResult AstarCore::plan(
   if (timed_out) {
     result.success = false;
     result.message = "time budget exceeded";
-    RCLCPP_WARN(
-      logger_,
-      "A* aborted after %.1f ms; expanded %d nodes",
-      result.plan_duration_ms, nodes_expanded);
     return result;
   }
   if (!reached) {
     result.success = false;
     result.message = "no path found";
-    RCLCPP_WARN(
-      logger_,
-      "A* failed: open set exhausted after %d nodes",
-      nodes_expanded);
     return result;
   }
 
-  result.path = reconstruct_path(buf, grid, goal_flat);
+  result.path = reconstruct_path_from_parents(buf.came_from, grid, goal_flat);
   result.success = true;
   result.message = "ok";
   return result;

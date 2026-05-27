@@ -9,8 +9,6 @@
 #include <thread>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
-
 namespace pathfinder_algo_rrt
 {
 
@@ -56,6 +54,12 @@ public:
   void add_node(const Point3 & p, int parent_idx, double cost)
   {
     tree_nodes_.push_back({p, parent_idx, cost});
+  }
+
+  void update_node(int idx, int parent_idx, double cost)
+  {
+    tree_nodes_[idx].parent_idx = parent_idx;
+    tree_nodes_[idx].cost = cost;
   }
 
   const std::vector<TreeNode> & nodes() const { return tree_nodes_; }
@@ -274,7 +278,7 @@ RRTFeedback build_feedback(
   const pathfinder_core::InflatedVoxelGrid & grid)
 {
   RRTFeedback fb;
-  fb.nodes_explored = static_cast<int>(rrt.size());
+  fb.nodes_expanded = static_cast<int>(rrt.size());
   fb.best_cost_so_far = std::isfinite(best_cost)
     ? best_cost
     : std::numeric_limits<double>::infinity();
@@ -290,11 +294,6 @@ RRTFeedback build_feedback(
 }
 
 }  // namespace
-
-RRTCore::RRTCore(const rclcpp::Logger & logger)
-: logger_(logger)
-{
-}
 
 RRTResult RRTCore::plan(
   const pathfinder_core::InflatedVoxelGrid & grid,
@@ -321,13 +320,11 @@ RRTResult RRTCore::plan(
   if (rrt.point_collision(start_pt)) {
     result.success = false;
     result.message = "start in collision";
-    RCLCPP_WARN(logger_, "RRT*: start in collision");
     return result;
   }
   if (rrt.point_collision(goal_pt)) {
     result.success = false;
     result.message = "goal in collision";
-    RCLCPP_WARN(logger_, "RRT*: goal in collision");
     return result;
   }
 
@@ -383,12 +380,17 @@ RRTResult RRTCore::plan(
     {
       const double candidate_cost = cost_to_new + distance(x_new, goal_pt);
       if (candidate_cost < best_cost) {
-        rrt.add_node(goal_pt, new_idx, candidate_cost);
-        best_goal_idx = static_cast<int>(rrt.size()) - 1;
-        best_cost = candidate_cost;
-        if (iter_at_first_goal < 0) {
+        if (best_goal_idx < 0) {
+          rrt.add_node(goal_pt, new_idx, candidate_cost);
+          best_goal_idx = static_cast<int>(rrt.size()) - 1;
           iter_at_first_goal = iter;
+        } else {
+          // Rewire the existing goal node instead of appending a duplicate.
+          // nearest()/neighbors_within() scan the full tree, so a second goal
+          // node at the same position would corrupt those queries.
+          rrt.update_node(best_goal_idx, new_idx, candidate_cost);
         }
+        best_cost = candidate_cost;
       }
     }
 
@@ -419,17 +421,9 @@ RRTResult RRTCore::plan(
     result.path = path_to_voxels(pts, grid);
     result.success = true;
     result.message = "ok";
-    RCLCPP_INFO(
-      logger_,
-      "RRT* succeeded: nodes=%zu cost=%.3f iters=%d time=%.1fms",
-      rrt.size(), best_cost, iter, total_ms);
   } else {
     result.success = false;
     result.message = "no path found in budget";
-    RCLCPP_WARN(
-      logger_,
-      "RRT* failed: nodes=%zu iters=%d time=%.1fms",
-      rrt.size(), iter, total_ms);
   }
 
   return result;

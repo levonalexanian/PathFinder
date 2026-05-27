@@ -31,7 +31,6 @@ target_include_directories(dijkstra_core PUBLIC
   ${OCTOMAP_INCLUDE_DIRS}
 )
 ament_target_dependencies(dijkstra_core
-  rclcpp
   pathfinder_core
 )
 target_link_libraries(dijkstra_core ${OCTOMAP_LIBRARIES})
@@ -63,6 +62,7 @@ target_link_directories(dijkstra_node PRIVATE ${OCTOMAP_LIBRARY_DIRS})
 
 install(
   TARGETS dijkstra_core
+  EXPORT export_dijkstra_core
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

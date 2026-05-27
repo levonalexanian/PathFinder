@@ -5,8 +5,6 @@
 #include <string>
 #include <vector>
 
-#include <rclcpp/logger.hpp>
-
 #include <pathfinder_core/voxel_grid.hpp>
 
 namespace pathfinder_algo_astar
@@ -23,7 +21,7 @@ struct AstarParams
 
 struct AstarFeedback
 {
-  int nodes_explored{0};
+  int nodes_expanded{0};
   std::vector<pathfinder_core::VoxelIndex> best_partial_path;
   double best_cost_so_far{0.0};
   std::vector<std::size_t> sampled_open_flat;
@@ -44,7 +42,7 @@ class AstarCore
 public:
   using FeedbackCallback = std::function<void(const AstarFeedback &)>;
 
-  explicit AstarCore(const rclcpp::Logger & logger);
+  AstarCore() = default;
 
   AstarResult plan(
     const pathfinder_core::InflatedVoxelGrid & grid,
@@ -52,9 +50,6 @@ public:
     const pathfinder_core::VoxelIndex & goal,
     const AstarParams & params,
     FeedbackCallback feedback);
-
-private:
-  rclcpp::Logger logger_;
 };
 
 }  // namespace pathfinder_algo_astar

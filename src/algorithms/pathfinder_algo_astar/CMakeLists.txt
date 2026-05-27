@@ -29,7 +29,6 @@ target_include_directories(astar_core PUBLIC
   ${OCTOMAP_INCLUDE_DIRS}
 )
 ament_target_dependencies(astar_core
-  rclcpp
   pathfinder_core
 )
 target_link_libraries(astar_core ${OCTOMAP_LIBRARIES})
