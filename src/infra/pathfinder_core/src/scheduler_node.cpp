@@ -171,8 +171,8 @@ private:
         const std::shared_ptr<const RequestPath::Feedback> feedback) {
         RCLCPP_INFO(
           get_logger(),
-          "planner feedback: explored=%d best_cost=%.3f",
-          feedback->nodes_explored, feedback->best_cost_so_far);
+          "planner feedback: expanded=%d best_cost=%.3f",
+          feedback->nodes_expanded, feedback->best_cost_so_far);
         marker_pub_->publish(feedback->search_state);
       };
     opts.result_callback =
