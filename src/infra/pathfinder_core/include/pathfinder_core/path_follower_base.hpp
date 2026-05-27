@@ -48,6 +48,21 @@ protected:
   {
   }
 
+  Config declare_and_load_base_config(double default_waypoint_tolerance = 0.15)
+  {
+    declare_parameter<double>("waypoint_tolerance", default_waypoint_tolerance);
+    declare_parameter<double>("update_rate", 20.0);
+    declare_parameter<std::string>("map_frame", "map");
+    declare_parameter<std::string>("base_frame", "base_link");
+
+    Config cfg;
+    cfg.waypoint_tolerance = get_parameter("waypoint_tolerance").as_double();
+    cfg.update_rate = get_parameter("update_rate").as_double();
+    cfg.map_frame = get_parameter("map_frame").as_string();
+    cfg.base_frame = get_parameter("base_frame").as_string();
+    return cfg;
+  }
+
   void init_follower(const Config & cfg)
   {
     cfg_ = cfg;
