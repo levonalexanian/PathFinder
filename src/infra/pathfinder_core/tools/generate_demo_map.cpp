@@ -50,6 +50,12 @@ int main(int argc, char ** argv)
 
   fill_box(tree, 0.5, 0.5, 1.0, 2.5, 2.5, 1.2, res);
 
+  // Invisible ceiling at z=7: raises the planning grid's z-extent above the 5 m
+  // posts so the drone can reach a free cell directly over a post cap and land
+  // on top. Octomap-only by design — not mirrored in the visualizer or Gazebo
+  // world (a full roof would obscure the scene; the drone never flies near z=7).
+  fill_box(tree, 0.0, 0.0, 6.9, 10.0, 10.0, 7.0, res);
+
   tree.updateInnerOccupancy();
 
   if (!tree.writeBinary(out_path)) {
